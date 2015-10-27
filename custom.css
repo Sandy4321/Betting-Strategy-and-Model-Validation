@@ -1,0 +1,13 @@
+/* http://www.w3schools.com/css/css_examples.asp */
+
+table {
+  max-width: 95%;
+  border: 1px solid #ccc;
+}
+th {
+  background-color: #0000FF;
+    color: #0000A0;
+}
+td {
+  background-color: #00FFFF;
+}

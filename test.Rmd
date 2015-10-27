@@ -1,0 +1,103 @@
+---
+title: "Test"
+author: "Ryo®, Eng Lian Hu"
+date: "October 25, 2015"
+output: html_document
+---
+
+```{r load-packages, include=FALSE}
+## You can write as ```{r load-packages, include=FALSE} if you want to hide the particular chunk
+## Setting to omitt all warnings
+options(warn=-1)
+
+## Loading the packages
+if(!'devtools' %in% installed.packages()){
+  install.packages('devtools')}
+if(!'BBmisc' %in% installed.packages()){
+  install.packages('BBmisc')}
+
+suppressPackageStartupMessages(library('BBmisc'))
+pkgs <- c('devtools','stringr','stringi','reshape','reshape2','data.table','sparkline','DT','plyr','dplyr','magrittr','foreach','doParallel','rmarkdown','tidyr','gtable','grid','gridExtra','pander','stringdist','knitr','rmarkdown','lubridate','d3Network','networkD3')
+suppressAll(lib(pkgs)); rm(pkgs)
+```
+
+Creating a parallel computing Cluster and support functions.
+
+```{r setting, include=FALSE}
+## Preparing the parallel cluster using the cores
+doParallel::registerDoParallel(cores = 16)
+#' @BiocParallel::register(MulticoreParam(workers=2))
+
+## Make pretty table
+## http://kbroman.org/knitr_knutshell/pages/figs_tables.html
+## knitr configuration
+opts_knit$set(progress=FALSE)
+opts_chunk$set(echo=TRUE, message=FALSE, tidy=TRUE, comment=NA, fig.path="figure/", fig.keep="high", fig.width=10, fig.height=6, fig.align="center")
+
+## Table width setting
+panderOptions('table.split.table', Inf)
+```
+
+```{r read-datasetA, echo=FALSE, results='asis'}
+## Read the datasets
+## Refer to **Testing efficiency of coding.Rmd** at chunk `get-data-summary-table-2.1`
+source(paste0(getwd(),'/function/readfirmDatasets.R'))
+years <- seq(2011,2015)
+mbase <- readfirmDatasets(years=years)
+dateID <- sort(unique(mbase$datasets$Date))
+#'@ pander(head(mbase$datasets)) ## exactly same layout with kable(x)
+
+## example of the dataset in the research paper
+##   due to the data heavy and overload ,max 5mb while generated 79mb html file, here I just simply subset the head section
+mbase$datasets %>% head %>% kable
+```
+
+```{r read-datasetB, echo=FALSE, results='asis'}
+## Load the scraped spbo livescore datasets.
+source(paste0(getwd(),'/function/readSPBO2.R'))
+spboData <- readSPBO2(dateID=dateID, parallel=FALSE)
+## example of the scrapped livescore dataset in the research paper
+##   due to the data heavy and overload ,max 5mb while generated 79mb html file, here I just simply subset the head section
+spboData %>% head %>% kable 
+```
+
+```{r matching-01, echo=FALSE, results='asis'}
+## Get and filter the teams' name
+## Filter and drop the first-half, corners and other games
+teamID <- sort(unique(c(as.character(mbase$datasets$Home), as.character(mbase$datasets$Away))))
+teamID <- teamID[!teamID %in% mbase$others]
+
+spboTeam <- sort(c(as.vector(spboData$Home), as.vector(spboData$Away)))
+spboTeamID <- sort(unique(spboTeam))
+
+df1 <- data.frame(team=teamID[tolower(teamID) %in% tolower(spboTeamID)], spbo=spboTeamID[tolower(spboTeamID) %in% tolower(teamID)]) %>% tbl_df %>% mutate(team=as.character(team),spbo=as.character(spbo),pass=ifelse(team==spbo,'Duplicated','Capital Letters')) %>% arrange(pass)
+row.names(df1) <- NULL
+rbind(df1 %>% filter(pass=='Duplicated') %>% head(3),df1 %>% filter(pass=='Capital Letters') %>% head(3)) %>% kable
+```
+
+```{r matching-05A, echo=FALSE, results='asis'}
+source(paste0(getwd(),'/function/makeList.R'))
+## Since the elements are not much enough but list quit a number, just set parallel=FALSE will be faster few minutes.
+dfm <- makeList(mbase, spboData, levDist=0.1, parallel=FALSE, agrep=TRUE)
+```
+
+```{r decission-tree-A, echo=FALSE, results='asis'}
+## Refered `rpart` and `randomForest` to plot the decision tree, showing how to match the teams' name but required numeric data and also static graph.
+## Here I using `d3Network`
+d3data <- dfm$data %>% data.frame
+d3data$X1 <- ifelse(is.na(d3data$X1),'NA',d3data$X1)
+#'@ d3data %>% d3SimpleNetwork(.,width='automatic', height=400) ## https://github.com/christophergandrud/d3Network/issues/31
+#'@ d3data %>% as.list %>% d3Tree ## https://github.com/christophergandrud/d3Network/issues/31
+d3data[1:2] %>% simpleNetwork(.,width=300, height=300)
+```
+
+Since the `simpleNetwork` function only apply to 2 columns dataset, here I split to be 2 graphs.
+
+```{r decission-tree-B, echo=FALSE, results='asis'}
+d3data[3:4] %>% simpleNetwork(.,width='auto', height=800)
+```
+
+```{r matching-05B, echo=FALSE, results='asis'}
+#'@ datatable(dfm$data)
+```
+
