@@ -312,10 +312,11 @@ datatable(dfm$data)
 ```
 
 
-### 4.3 Maximum Likehood
+### 4.3 StringDist
 
-```{r maximum-likelihood, echo=FALSE, results='asis'}
-dfm$data
+```{r stringdist, echo=FALSE, results='asis'}
+source('.R')
+
 ```
 
 
