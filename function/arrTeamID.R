@@ -8,9 +8,12 @@ arrTeamID <- function(mbase, spboData, method=c('osa','lv','dl','hamming',
   ## STEP 2) Apply regular expression to filter/seperate the women team, B team or U21 etc prior to partial 
   ##    matching the most approximate teams' name (teams' name others than in STEP 1).
   
+  ## Setting to omitt all warnings
+  options(warn=-1)
+  
   methd <- c('osa','lv','dl','hamming','lcs','qgram','cosine','jaccard','jw','soundex')
-  if(all(method %in% methd)){
-    stop('Please select one or more stringdist.method from above:',cat(method))
+  if(!all(method %in% methd)){
+    stop('Please select one or more stringdist.method from above:',cat(methd))
   }
   
   source(paste0(getwd(),'/function/makeList.R'))

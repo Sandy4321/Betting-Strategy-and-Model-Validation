@@ -16,10 +16,18 @@ stringdistList <- function(method=c('osa','lv','dl','hamming','lcs','qgram','cos
   ## 09. jw - Jaro, or Jaro-Winker distance.
   ## 10. soundex - Distance based on soundex encoding (see below)
   
+  ## Setting to omitt all warnings
+  options(warn=-1)
+  
   suppressPackageStartupMessages(require('stringdist', quietly=TRUE))
   suppressPackageStartupMessages(require('plyr', quietly=TRUE))
   suppressPackageStartupMessages(require('dplyr', quietly=TRUE))
   suppressPackageStartupMessages(require('tidyr', quietly=TRUE))
+  
+  methd <- c('osa','lv','dl','hamming','lcs','qgram','cosine','jaccard','jw','soundex')
+  if(!all(method %in% methd)){
+    stop('Please select one or more stringdist.method from above:',cat(methd))
+  }
   
   if(!is.vector(method)&!is.vector(tmID_A)&!is.vector(tmID_B)&!is.numeric(levDist)){
     stop('Please enter 3 vectors which are method, tmID_A and tmID_B! levDist must be numeric number from 
@@ -41,8 +49,8 @@ stringdistList <- function(method=c('osa','lv','dl','hamming','lcs','qgram','cos
   ##   maxDist has been depreciated. Therefore more data will generate a more accurate matching result. 
   ## 
   dm <- expand.grid(tmID_A,tmID_B) # Distance matrix in long form
-  names(dm) <- c('teamID','spboTeamID')
-  dm$dist <- stringdist(dm$teamID,dm$spboTeamID, method=method, maxDist=levDist)
+  names(dm) <- c('teamID','spboID')
+  dm$dist <- stringdist(dm$teamID,dm$spboID, method=method, maxDist=levDist)
   ## String edit distance (use your favorite function here)
   
   ## ---------------------------------------------------------------------------------------------
@@ -62,10 +70,10 @@ stringdistList <- function(method=c('osa','lv','dl','hamming','lcs','qgram','cos
   
   ## ---------------------------------------------------------------------------------------------
   strList <- llply(as.list(method),function(x){
-    res <- data.frame(greedyAssign(as.character(dm$teamID),as.character(dm$spboTeamID),dm$dist)) %>% tbl_df
-    names(res) <- c('tmID',x,paste0('dist.',x))
+    res <- data.frame(greedyAssign(as.character(dm$teamID),as.character(dm$spboID),dm$dist)) %>% tbl_df
+    names(res) <- c('teamID',x,paste0('dist.',x))
     return(res)
     },.parallel=parallel)
   
-  strList <- Reduce(function(x, y) merge(x, y, by='tmID'), strList) %>% tbl_df
+  strList <- Reduce(function(x, y) merge(x, y, by='teamID'), strList) %>% tbl_df
   return(strList)}

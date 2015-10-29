@@ -223,7 +223,7 @@ kable(df2B)
 
 ### 3.3 Apply agrep()
 
-  Secondly, there is an article from [Merging Data Sets Based on Partially Matched Data Elements](http://www.r-bloggers.com/merging-data-sets-based-on-partially-matched-data-elements/) which apply while loop.
+  I tried to simply apply the `agrep()` function to partially matching the teams' name.
 
 ```{r matching-03, echo=FALSE, results='asis'}
 ## Filter spboTeamID wihthout other games and 1st Half team names
@@ -244,32 +244,27 @@ kable(df3)
 
 ### 3.4 Apply partialMatch()
 
-  There is a partialMatch() function from [How can I match fuzzy match strings from two datasets?](http://stackoverflow.com/questions/26405895/how-can-i-match-fuzzy-match-strings-from-two-datasets) which apply Expectation Maximization theory by using while loop on `agrep()`.
+  Secondly, there is an article from [Merging Data Sets Based on Partially Matched Data Elements](http://www.r-bloggers.com/merging-data-sets-based-on-partially-matched-data-elements/) which apply subset to partial matching the teams' name.
 
-```{r matching-04, echo=FALSE, results='asis'}
+```{r matching-04A, echo=FALSE, results='asis'}
 ## Load the partialMatch() function
 source(paste0(getwd(),'/function/partialMatch.R'))
-pmID <- iconv(teamID)
-df4 <- partialMatch(pmID, spboTeamID) %>% rename(team=raw.x,spbo=raw.y) %>% tbl_df
-row.names(df4) <- NULL
-rm(pmID)
+df4 <- partialMatch(iconv(teamID), spboTeamID)
 #'@ rbind(df4 %>% filter(pass=='Duplicate') %>% head(3),df4 %>% filter(pass=='Partial') %>% head(3)) %>% kable
-df4 %>% datatable
+df4 %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.")
 ```
 
-*table 3.4.1* `r paste(unlist(strsplit(as.character(dim(df4)),' ')), collapse=' x ')`
-
-  Above table simply display 3 matched teams' name for each duplicate and partial matching.
+  Below table simply display few matched teams' name which are not accurate.
 
 ```{r matching-04B, echo=FALSE, results='asis'}
-df4 %>% filter((team %in% team[grep('Women|U[0-9]{2}',team)])|(spbo %in% spbo[grep('Women|U[0-9]{2}',spbo)]), pass=='Partial') %>% head %>% kable
+df %>% filter((teamID %in% teamID[grep('Women|U[0-9]{2}',teamID)])|(spboID %in% spboID[grep('Women|U[0-9]{2}',spboID)]), Match=='Partial') %>% head %>% kable
 ```
 
 *table 3.4.2* `r paste(unlist(strsplit(as.character(dim(df4)),' ')), collapse=' x ')`
 
-  From the table above we all know that even though we purely apply EM theory on the raw data, the team `AaB Aalborg` from firm A will match with `AaB Aalborg U17` from livescore website and `Airdrie United` match to `Airdrie United Women` while there are totally different team and will lead reasearcher calculate a wrong predictive figures for investment.
+  From the table above we all know that the team `AaB Aalborg` from firm A will match with `AaB Aalborg U17` from livescore website and `Airdrie United` match to `Airdrie United Women` while there are totally different team and will lead reasearcher calculate a wrong predictive figures for investment.
 
-  In order to maximized the soccer matches (observations) available for the research, here I seperates few steps to matching the teams' name by using `split()` and cross-matching each others (`spbo[grep(team,spbo)]` and `spbo[grep(spbo,team)]`) to seperately rearrange the data prior to start the algorithmic matching function in **section 4 Reprocess the Data**.
+  In order to maximized the soccer matches (observations) available for the research, here I seperates few steps to matching the teams' name by using `split()` and cross-matching each others to seperately rearrange the data prior to start the algorithmic matching function in **section 4 Reprocess the Data**.
 
 
 
@@ -289,14 +284,13 @@ I would like to plot a hierarchical chart for spliting teams' name for `agrep`. 
 ```{r decission-tree-A, echo=FALSE, results='asis'}
 ## Refered `rpart` and `randomForest` to plot the decision tree, showing how to match the teams' name but required numeric data and also static graph.
 ## Here I using `d3Network`
-d3data <- dfm$data %>% data.frame
-d3data$X1 <- ifelse(is.na(d3data$X1),'NA',d3data$X1)
+d3data <- dfm$partialData
 #'@ d3data %>% d3SimpleNetwork(.,width='automatic', height=400) ## https://github.com/christophergandrud/d3Network/issues/31
 #'@ d3data %>% as.list %>% d3Tree ## https://github.com/christophergandrud/d3Network/issues/31
 d3data[1:2] %>% simpleNetwork(.,width=400, height=400)
 ```
 
-Since the `simpleNetwork` function only apply to 2 columns dataset, here I split to be 2 graphs.
+Since the `simpleNetwork()` function only apply to 2 columns dataset, here I split to be 2 graphs.
 
 ```{r decission-tree-B, echo=FALSE, results='asis'}
 d3data[3:4] %>% simpleNetwork(.,width='auto', height=800)
@@ -308,16 +302,21 @@ d3data[3:4] %>% simpleNetwork(.,width='auto', height=800)
 Here I tried to `split` teams' name into list to matching.
 
 ```{r matching-05B, echo=FALSE, results='asis'}
-datatable(dfm$data)
+datatable(dfm$partialData)
 ```
 
 
-### 4.3 StringDist
+### 4.3 StringDist Maximum Likelihood
 
+  There is an good example from [How can I match fuzzy match strings from two datasets?](http://stackoverflow.com/questions/26405895/how-can-i-match-fuzzy-match-strings-from-two-datasets) which apply `expand.grid()` to build a data frame and then Expectation Maximization theory by using while loop on `stringdist()`.
+  
 ```{r stringdist, echo=FALSE, results='asis'}
-source('.R')
-
+source(paste0(getwd(),'/function/arrTeamID.R'))
+strDF <- arrTeamID(mbase, spboData, levDist=0.1, parallel=FALSE)
+datatable(strDF$result)
 ```
+
+From the above table, I've matching the teams' name which is Section 2 Dataset inside [Betting Strategy and Model Validation](https://github.com/englianhu/Betting-Strategy-and-Model-Validation/blob/master/Betting%20Strategy%20and%20Model%20Validation.Rmd). Here I apply method = `r method` inside the `stringdist` function. You are feel free to apply the function to scrap and also re-arrange the teams' name and soccer scores data for your own odds price modelling.
 
 
 
@@ -332,7 +331,7 @@ It's useful to record some information about how your file was created.
   * `r R.version.string`
   * R version (short form): `r getRversion()`
   * `rmarkdown` package version: `r packageVersion('rmarkdown')`
-  * File package version: 1.0
+  * File version: 1.0
   * Additional session information
   
 ```{r echo=FALSE, results='asis'}
@@ -348,5 +347,7 @@ Sys.info()
   * [Merging Data Sets Based on Partially Matched Data Elements](http://www.r-bloggers.com/merging-data-sets-based-on-partially-matched-data-elements/)
   * [How can I match fuzzy match strings from two datasets?](http://stackoverflow.com/questions/26405895/how-can-i-match-fuzzy-match-strings-from-two-datasets)
   * [d3Network](http://christophergandrud.github.io/d3Network/)
-
+  * [DT: An R interface to the DataTables library](http://blog.rstudio.org/2015/06/24/dt-an-r-interface-to-the-datatables-library/)
+  * [DT: An R interface to the DataTables library](https://rstudio.github.io/DT/)
+  
 

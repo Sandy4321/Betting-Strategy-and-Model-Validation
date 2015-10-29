@@ -6,6 +6,9 @@ partialMatch <- function(x, y, levDist=0.1){
   ## So for example, United Kingdom would become kingdomunited
   ## We might also remove stopwords such as 'the' and 'of'.
   
+  require('plyr', quietly=TRUE)
+  require('dplyr', quietly=TRUE)
+  
   ## ---------------------------------------------------------------------------------------------  
   signature <- function(x){
     sign <- paste(sort(unlist(strsplit(tolower(x)," "))),collapse='')
@@ -38,7 +41,9 @@ partialMatch <- function(x, y, levDist=0.1){
     matched <- rbind(matched,un.matched)
   }
   matched <- subset(matched,select=c("raw.x","raw.y","pass"))
-  dimnames(matches) <- list(NULL,c('tmID','spboID','Match'))
+  names(matched) <- c('teamID','spboID','Match')
+  rownames(matched) <- NULL
+  matched <- matched  %>% tbl_df
   
   return(matched)
 }
