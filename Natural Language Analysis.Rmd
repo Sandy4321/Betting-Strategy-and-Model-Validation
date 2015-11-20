@@ -1,6 +1,6 @@
 ---
 title: "Natural Language Analysis"
-author: '[Ryo, Eng Lian Hu](http://englianhu.wordpress.com) <img src=''figure/TonyStark.png''
+author: '[Ryo, Eng Lian Hu](http://englianhu.wordpress.com) <img src=''figure/me.JPG''
   width=''24''> TonyStark®'
 date: "9/22/2015"
 output:
@@ -52,9 +52,11 @@ doParallel::registerDoParallel(cores = 16)
 
 ## Make pretty table
 ## http://kbroman.org/knitr_knutshell/pages/figs_tables.html
+## https://cran.r-project.org/web/packages/htmlTable/vignettes/tables.html
+##
 ## knitr configuration
 opts_knit$set(progress=FALSE)
-opts_chunk$set(echo=TRUE, message=FALSE, tidy=TRUE, comment=NA, fig.path="figure/", fig.keep="high", fig.width=10, fig.height=6, fig.align="center")
+opts_chunk$set(echo=TRUE, message=FALSE, tidy=TRUE, comment=NA, fig.path='figure/', fig.keep='high', fig.width=10, fig.height=6, fig.align="center", scrolling='Auto')
 
 ## Table width setting
 panderOptions('table.split.table', Inf)
@@ -77,7 +79,7 @@ dateID <- sort(unique(mbase$datasets$Date))
 
 ## example of the dataset in the research paper
 ##   due to the data heavy and overload ,max 5mb while generated 79mb html file, here I just simply subset the head section
-mbase$datasets %>% head %>% kable
+mbase$datasets %>% head %>% datatable(.,caption="Table 2.1 : Soccer Staking Data from Firm A",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 *table 2.1* `r paste(unlist(strsplit(as.character(dim(mbase$datasets)),' ')), collapse=' x ')`
@@ -92,7 +94,7 @@ source(paste0(getwd(),'/function/readSPBO2.R'))
 spboData <- readSPBO2(dateID=dateID, parallel=FALSE)
 ## example of the scrapped livescore dataset in the research paper
 ##   due to the data heavy and overload ,max 5mb while generated 79mb html file, here I just simply subset the head section
-spboData %>% head %>% kable 
+spboData %>% head %>% datatable(.,caption="Table 2.2 : SPBO Soccer Data",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 *table 2.2* `r paste(unlist(strsplit(as.character(dim(spboData)),' ')), collapse=' x ')`
@@ -119,7 +121,7 @@ spboTeamID <- sort(unique(spboTeam))
 
 df1 <- data.frame(team=teamID[tolower(teamID) %in% tolower(spboTeamID)], spbo=spboTeamID[tolower(spboTeamID) %in% tolower(teamID)]) %>% tbl_df %>% mutate(team=as.character(team),spbo=as.character(spbo),pass=ifelse(team==spbo,'Duplicated','Capital Letters')) %>% arrange(pass)
 row.names(df1) <- NULL
-rbind(df1 %>% filter(pass=='Duplicated') %>% head(3),df1 %>% filter(pass=='Capital Letters') %>% head(3)) %>% kable
+rbind(df1 %>% filter(pass=='Duplicated') %>% head(3),df1 %>% filter(pass=='Capital Letters') %>% head(3)) %>% kable(.,caption='table 3.1.1')
 ```
 
 *table 3.1.1* `r paste(unlist(strsplit(as.character(dim(df1)),' ')), collapse=' x ')`
@@ -129,22 +131,22 @@ rbind(df1 %>% filter(pass=='Duplicated') %>% head(3),df1 %>% filter(pass=='Capit
 
   There has a concern which is noramlly second teams' name must be exactly same with first team but only add II, reserved etc to the first team name, for example : *Mainz 05* is first team but not fifth reserved team. More soccer matches data scrapped will be more accurate, for example if we only scrapped one day data, how can we matching the first team if let say only Chelsea reserved team play on that particular date.
   
-  However there has another concern which is first team *TSV 1860 Munchen* but second/U19 team termed as *1860 Munchen II*, *1860 Munchen U19* etc. The *Lincoln* team name supposed to be matched with *Lincoln City* but not *Lincoln United* while *Lincoln Citx* will be most approximately matching to *Lincoln Xxitxx* compare to *Lincoln*.
+  However there has another concern which is first team *TSV 1860 Munchen* but second/U19 team termed as *1860 Munchen II*, *1860 Munchen U19* etc. The *Lincoln* team name supposed to be matched with *Lincoln City* but not *Lincoln United* while *Lincoln City* will be most approximately matching to *Lincoln Xxitxx* compare to *Lincoln*.
   
   Besides, if I set the priority of matching the kick-off date and later team names, it will be a concern of possibilities of postponed staked matches (postponed after firm A placed bets, sometimes firm A will placed bets on Early market or the kick-off date accidentially changed/postponed before kick-off due to snowing/downpour/etc).
   
   I load the [`stringdist`](https://cran.r-project.org/web/packages/stringdist/index.html) package to apply the algorithmic matching the team names.
   
-  * 01. osa - Optimal string aligment, (restricted Damerau-Levenshtein distance).
-  * 02. lv - Levenshtein distance (as in R’s native adist).
-  * 03. dl - Full Damerau-Levenshtein distance.
-  * 04. hamming - Hamming distance (a and b must have same nr of characters).
-  * 05. lcs - Longest common substring distance.
-  * 06. qgram - q-gram distance.
+  * 01. [osa](https://en.wikipedia.org/wiki/Optimal_string_alignment) - Optimal string aligment, (restricted Damerau-Levenshtein distance).
+  * 02. [lv](https://en.wikipedia.org/wiki/Levenshtein_distance) - Levenshtein distance (as in R’s native adist).
+  * 03. [dl](https://en.wikipedia.org/wiki/Damerau%E2%80%93Levenshtein_distance) - Full Damerau-Levenshtein distance.
+  * 04. [hamming](https://en.wikipedia.org/wiki/Hamming_distance) - Hamming distance (a and b must have same nr of characters).
+  * 05. [lcs](https://en.wikipedia.org/wiki/Longest_common_subsequence_problem) - Longest common substring distance.
+  * 06. [qgram](https://en.wikipedia.org/wiki/N-gram) - q-gram distance.
   * 07. cosine - cosine distance between q-gram profiles.
-  * 08. jaccard - Jaccard distance between q-gram profiles.
-  * 09. jw - Jaro, or Jaro-Winker distance.
-  * 10. soundex - Distance based on soundex encoding (see below).
+  * 08. [jaccard](https://en.wikipedia.org/wiki/Jaccard_index) - Jaccard distance between q-gram profiles.
+  * 09. [jw](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance) - Jaro, or Jaro-Winker distance.
+  * 10. [soundex](https://en.wikipedia.org/wiki/Soundex) - Distance based on soundex encoding (see below).
   
   Lets take an example below.
   
@@ -188,7 +190,7 @@ len <- n-len
 
 df2A <- mapply(function(x,y) c(x, rep(NA, y)), lst, len) %>% data.frame %>% mutate(Matching1='Lincoln',Matching2='Lincoln City',method=method) %>% select(Matching1,method,uniqueID_0.1,allElems_0.1,uniqueID_0.5,allElems_0.5,uniqueID_1.0,allElems_1.0,uniqueID_2.0,allElems_2.0,uniqueID_Inf,allElems_Inf) %>% tbl_df
 rm(lst,len,n)
-kable(df2A)
+df2A %>% datatable(.,caption="Table 3.2.1 : StringDist Matching 'Lincoln' ",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 *table 3.2.1* `r paste(unlist(strsplit(as.character(dim(df2A)),' ')), collapse=' x ')`
@@ -213,7 +215,7 @@ len <- n-len
 
 df2B <- mapply(function(x,y) c(x, rep(NA, y)), lst, len) %>% data.frame %>% mutate(Matching1='Lincoln',Matching2='Lincoln City',method=method) %>% select(Matching1,method,uniqueID_0.1,allElems_0.1,uniqueID_0.5,allElems_0.5,uniqueID_1.0,allElems_1.0,uniqueID_2.0,allElems_2.0,uniqueID_Inf,allElems_Inf) %>% tbl_df
 rm(lst,len,n)
-kable(df2B)
+df2B %>% datatable(.,caption="Table 3.2.2 : StringDist Matching 'Lincoln City' ",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 *table 3.2.2* `r paste(unlist(strsplit(as.character(dim(df2B)),' ')), collapse=' x ')`
@@ -236,7 +238,7 @@ len <- n-len
 
 df3 <- mapply(function(x,y) c(x, rep(NA, y)), lst, len) %>% data.frame %>% mutate(Matching1='Lincoln',Matching2='Lincoln City') %>% select(Matching1,team1,spbo1,Matching2,team2,spbo2) %>% tbl_df
 rm(lst,len,n,len)
-kable(df3)
+df3 %>% kable(.,caption='table 3.3.1')
 ```
 
 *table 3.3.1* `r paste(unlist(strsplit(as.character(dim(df3)),' ')), collapse=' x ')`
@@ -251,13 +253,13 @@ kable(df3)
 source(paste0(getwd(),'/function/partialMatch.R'))
 df4 <- partialMatch(iconv(teamID), spboTeamID)
 #'@ rbind(df4 %>% filter(pass=='Duplicate') %>% head(3),df4 %>% filter(pass=='Partial') %>% head(3)) %>% kable
-df4 %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.")
+df4 %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
   Below table simply display few matched teams' name which are not accurate.
 
 ```{r matching-04B, echo=FALSE, results='asis'}
-df %>% filter((teamID %in% teamID[grep('Women|U[0-9]{2}',teamID)])|(spboID %in% spboID[grep('Women|U[0-9]{2}',spboID)]), Match=='Partial') %>% head %>% kable
+df4 %>% filter((teamID %in% teamID[grep('Women|U[0-9]{2}',teamID)])|(spboID %in% spboID[grep('Women|U[0-9]{2}',spboID)]), Match=='Partial') %>% head %>% kable(.,caption='table 3.4.2')
 ```
 
 *table 3.4.2* `r paste(unlist(strsplit(as.character(dim(df4)),' ')), collapse=' x ')`
@@ -279,7 +281,7 @@ source(paste0(getwd(),'/function/makeList.R'))
 dfm <- makeList(mbase, spboData, levDist=0.1, parallel=FALSE)
 ```
 
-I would like to plot a hierarchical chart for spliting teams' name for `agrep`. However due to `rpart` and `randomForest` packages required numeric data while diagram doesn't special. Here I plot two dynamic graphs.
+  I would like to plot a hierarchical chart for spliting teams' name for `agrep`. However due to `rpart` and `randomForest` packages required numeric data while diagram doesn't special. Here I plot two dynamic graphs.
 
 ```{r decission-tree-A, echo=FALSE, results='asis'}
 ## Refered `rpart` and `randomForest` to plot the decision tree, showing how to match the teams' name but required numeric data and also static graph.
@@ -290,7 +292,7 @@ d3data <- dfm$partialData
 d3data[1:2] %>% simpleNetwork(.,width=400, height=400)
 ```
 
-Since the `simpleNetwork()` function only apply to 2 columns dataset, here I split to be 2 graphs.
+  Since the `simpleNetwork()` function only apply to 2 columns dataset, here I split to be 2 graphs.
 
 ```{r decission-tree-B, echo=FALSE, results='asis'}
 d3data[3:4] %>% simpleNetwork(.,width='auto', height=800)
@@ -299,10 +301,12 @@ d3data[3:4] %>% simpleNetwork(.,width='auto', height=800)
 
 ### 4.2 Filtering and Reprocess the Data
 
-Here I tried to `split` teams' name into list to matching.
+  Prior to start the algorithmic string matching, I am using the idea from `Apply signature() from country names to reduce some of the minor differences between strings. In this case, convert all characters to lower case, sort the words alphabetically, and then concatenate them with no spaces. So for example, United Kingdom would become kingdomunited` which inside the [Merging Data Sets Based on Partially Matched Data Elements](http://www.r-bloggers.com/merging-data-sets-based-on-partially-matched-data-elements/). It will minimize/reduce the string distance to maximize the matching result.
+  
+  Here I tried to `split` teams' name into list and simply apply `grep` and `agrep` to apply first filtering.
 
 ```{r matching-05B, echo=FALSE, results='asis'}
-datatable(dfm$partialData)
+dfm$partialData %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 
@@ -313,7 +317,7 @@ datatable(dfm$partialData)
 ```{r stringdist, echo=FALSE, results='asis'}
 source(paste0(getwd(),'/function/arrTeamID.R'))
 strDF <- arrTeamID(mbase, spboData, levDist=0.1, parallel=FALSE)
-datatable(strDF$result)
+strDF$result %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 From the above table, I've matching the teams' name which is Section 2 Dataset inside [Betting Strategy and Model Validation](https://github.com/englianhu/Betting-Strategy-and-Model-Validation/blob/master/Betting%20Strategy%20and%20Model%20Validation.Rmd). Here I apply method = `r method` inside the `stringdist` function. You are feel free to apply the function to scrap and also re-arrange the teams' name and soccer scores data for your own odds price modelling.
@@ -326,12 +330,15 @@ From the above table, I've matching the teams' name which is Section 2 Dataset i
 ### 5.1 Documenting File Creation 
 
 It's useful to record some information about how your file was created.
-
-  * File creation date: `r Sys.Date()`
+  
+  * File creation date: 2015-10-29
   * `r R.version.string`
   * R version (short form): `r getRversion()`
   * `rmarkdown` package version: `r packageVersion('rmarkdown')`
-  * File version: 1.0
+  * File version: 1.0.2
+  * File latest updated date: `r Sys.Date()`
+  * Author Profile: [Ryo®, Eng Lian Hu](http://rpubs.com/englianhu/ryoeng)
+  * GitHub: [Source Code](https://github.com/Scibrokes/Betting-Strategy-and-Model-Validation/blob/master/Natural%20Language%20Analysis.Rmd)
   * Additional session information
   
 ```{r echo=FALSE, results='asis'}
@@ -346,8 +353,11 @@ Sys.info()
 
   * [Merging Data Sets Based on Partially Matched Data Elements](http://www.r-bloggers.com/merging-data-sets-based-on-partially-matched-data-elements/)
   * [How can I match fuzzy match strings from two datasets?](http://stackoverflow.com/questions/26405895/how-can-i-match-fuzzy-match-strings-from-two-datasets)
+  * [Fuzzy String Matching – a survival skill to tackle unstructured information](http://www.r-bloggers.com/fuzzy-string-matching-a-survival-skill-to-tackle-unstructured-information/)
+  * [Compute Levenshtein distance using R](http://www.yimizhao.com/#!Compute-Levenshtein-distance-using-R/cu6k/55249b460cf215f35a4a815d)
   * [d3Network](http://christophergandrud.github.io/d3Network/)
+  * [Tables with htmlTable and some alternatives](https://cran.r-project.org/web/packages/htmlTable/vignettes/tables.html)
   * [DT: An R interface to the DataTables library](http://blog.rstudio.org/2015/06/24/dt-an-r-interface-to-the-datatables-library/)
-  * [DT: An R interface to the DataTables library](https://rstudio.github.io/DT/)
-  
+  * Rstudio Blog - [DT: An R interface to the DataTables library](https://rstudio.github.io/DT/)
 
+  

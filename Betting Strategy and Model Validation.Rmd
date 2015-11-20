@@ -1,6 +1,6 @@
 ---
 title: "Betting Strategy and Model Validation"
-author: "[Ryo®, Eng Lian Hu](http://englianhu.wordpress.com) <img src='figure/TonyStark.png' width='24'> TonyStark®"
+author: "[Ryo®, Eng Lian Hu](http://englianhu.wordpress.com) <img src='figure/me.JPG' width='24'> TonyStark®"
 date: "7/22/2015"
 output:
   html_document:
@@ -49,7 +49,7 @@ if(!'BiocParallel' %in% installed.packages()){
 #' @library(c('dplyrr','nycflights13'))
 
 suppressPackageStartupMessages(library('BBmisc'))
-pkgs <- c('devtools','zoo','chron','stringr','stringi','reshape','reshape2','data.table','sparkline','DT','plyr','dplyr','magrittr','foreach','manipulate','ggplot2','ggthemes','proto','extrafont','directlabels','PerformanceAnalytics','plotly','doParallel','rvest','highlightHTML','knitr','rmarkdown','scales','lubridate','tidyr','whisker','gtable','grid','gridExtra','pander')
+pkgs <- c('devtools','zoo','chron','stringr','stringi','reshape','reshape2','data.table','sparkline','DT','plyr','dplyr','magrittr','foreach','manipulate','ggplot2','ggthemes','proto','extrafont','directlabels','PerformanceAnalytics','plotly','doParallel','rvest','highlightHTML','knitr','rmarkdown','scales','lubridate','tidyr','whisker','gtable','grid','gridExtra','pander','arules','arulesViz')
 #'@ c('memoise','RStudioAMI','parallel','BiocParallel','RSelenium','doMC','editR') #load if needed
 suppressAll(lib(pkgs)); rm(pkgs)
 ```
@@ -588,7 +588,7 @@ Kelly K-value [凯利模式资金管理](http://ch-hsieh.blogspot.com/2015/01/ke
 
 ### 4.4 Staking Modelling and Money Management
 
-```{r}
+```{r, results='asis'}
 ## Bootstrap and apply maximum likelihood model
 ## Full-Kelly, Half-Kelly, Quarter-Kelly
 
@@ -599,7 +599,7 @@ sample...
 
 ### 4.5 Expectation Maximization and Staking Simulation
 
-```{r}
+```{r, results='asis'}
 ## Apply Poison model to simulate the result of the matches
 ## Apply the Kelly model (iterations) to test the efficiency of the value betting from  Sportsbook consultancy firm A
 ## Apply poisson model to simulate different scores and result to test the efficiency of the staking model.
@@ -618,7 +618,7 @@ sample...
 
 Chapter 4.2 Comparison of Different Feature Sets and Betting Strategies in []()
 
-```{r}
+```{r, results='asis'}
 ## Bootstrap and apply maximum likelihood model 
 ## http://www.r-bloggers.com/apple-compared-to-others-with-ggthemes/
 #' @
@@ -626,6 +626,15 @@ Chapter 4.2 Comparison of Different Feature Sets and Betting Strategies in []()
 ```
 
 [Dixon&Pope2003](http://www.sciencedirect.com/science/article/pii/S016920700400010X) apply linear model to compare the efficiency of the odds prices offer by first three largest Firm A, B and C in UK.
+
+
+### 5.2 Market Basket
+
+Here I apply the `arules` and `arulesViz` packages to analyse the market basket of the bets.
+
+```{r, results='asis'}
+
+```
 
 
 

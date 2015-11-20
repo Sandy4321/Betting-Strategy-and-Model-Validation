@@ -35,14 +35,22 @@ makeList <- function(mbase, spboData, levDist=0.1, parallel=FALSE){
   suppressPackageStartupMessages(library('BBmisc'))
   pkgs <- c('devtools','stringr','magrittr','plyr','dplyr','foreach','doParallel','tidyr')
   suppressAll(lib(pkgs)); rm(pkgs)
+  source(paste0(getwd(),'/function/signature.R'))
   
   teamID <- sort(unique(c(as.character(mbase$datasets$Home), as.character(mbase$datasets$Away))))
   spboTeam <- sort(c(as.vector(spboData$Home), as.vector(spboData$Away))) %>% 
     ifelse(nchar(.)==0,NA,.) %>% na.omit
-  spboTeamID <- sort(unique(spboTeam))
+  spboTeamID <- sort(unique(spboTeam)); rm(spboTeam)
+  
+  ## Apply signature() which will re-arrange the strings for increased the accuracy of Levenstein or 
+  ##   or string distance calculation.
+  names(teamID) <- sapply(teamID, signature)
+  names(spboTeamID) <- sapply(spboTeamID, signature)
   
   ## Filter and drop the first-half, corners and other games
   tmID <- teamID[!teamID %in% mbase$others]
+  
+  
   
   
   ## STEP 1) Filter the exactly match (or different Capital letter teams' name) teams' name with spboTeamID,
@@ -105,9 +113,6 @@ makeList <- function(mbase, spboData, levDist=0.1, parallel=FALSE){
   ##  matching the 'TSV 1860 Munchen'.
   ## 
   ## (b1) Separate second team, reserved team or U18/U21 etc teams' name based on women/men
-  ext <- c('\\s{1}United','\\s{1}City','\\s{1}FC','\\s{1}BK','\\s{1}Club','[^AC]\\s{1}','\\s{1}SC')
-  # we can add somemore new element/key words if needed, for example : AFC, SC, FC.
-  
   ext.lst <- as.list(c('2','02','B','II','3','03','C','III','4','04','D','IV',
                        paste0('U',seq(15,23)),'Res','Rev','Reserve','Reserved','Reserves',
                        'Youth','All\\s{1}Stars','Beach\\s{1}Soccer','Futsal'))
@@ -166,15 +171,42 @@ makeList <- function(mbase, spboData, levDist=0.1, parallel=FALSE){
   tmID6 <- list(wm=c(tmID4A,fst=list(tmID5A)), mn=c(tmID4B,fst=list(tmID5B)))
   spboTM6 <- list(wm=c(spboTM4A,fst=list(spboTM5A)),mn=c(spboTM4B,fst=list(spboTM5B)))
   
+  #'@ ext <- c('\\s{1}United','\\s{1}City','\\s{1}FC','\\s{1}BK','\\s{1}Club','[^AC]\\s{1}','\\s{1}SC')
+  ext <- c(' United',' City',' FC',' BK',' Club','AC ',' SC','Inter ')
+  # we can add somemore new element/key words if needed, for example : AFC, SC, FC.
+  
   ## apply agrep to partial match the teams' name
   tm <- llply(seq(tmID6),function(i) {
           llply(seq(tmID6[[i]]), function(j){
-            if(length(tmID6[[i]][[j]])>0){
-            llply(seq(tmID6[[i]][[j]]), function(k){
-              spboTM6[[i]][[j]][agrep(tmID6[[i]][[j]][k],spboTM6[[i]][[j]],max.distance=levDist)]
+            tid <- tmID6[[i]][[j]]; pid <- spboTM6[[i]][[j]]
+            lg <- ifelse(levDist!=Inf,length(tid)>0,!is.na(as.character(tid)))
+            if(lg==TRUE){
+              llply(seq(tid), function(k){
+                td <- tolower(str_replace_all(tid[k],paste0(ext,'|',collapse=''),''))
+                tr <- pid[td==tolower(pid)]
+                if(length(tr)>0){
+                  fc <- tr
+                }else{
+                  th <- sort(unique(c(pid[grep(td,tolower(pid))])))
+                  tc <- tolower(str_replace_all(th,paste0(ext,'|',collapse=''),''))
+                  fc <- th[td==tc]
+                }
+                if(length(fc)>0) {
+                  fc <- fc
+                }else{
+                  fc <- sort(unique(c(pid[agrep(names(tid[k]),
+                        names(pid),max.distance=levDist)],
+                        pid[agrep(names(pid[k]),names(tid),
+                        max.distance=levDist)])))
+                  if(length(fc)>0){
+                    fc <- fc
+                  }else{
+                    fc <- NA
+                  }
+                }
               },.parallel=parallel)
             }else{
-              tmID6[[i]][[j]] <- NA
+              tid <- NA
             }
           },.parallel=parallel)
         },.parallel=parallel)
@@ -190,7 +222,7 @@ makeList <- function(mbase, spboData, levDist=0.1, parallel=FALSE){
         names(tm[[i]][[j]]) <- tmID6[[i]][[j]]
       }
     }
-  };rm(i,j)
+  };rm(i,j, ext)
     
   tmID6[[1]] <- llply(tmID6[[1]], function(x) if(length(x)==0){NA}else{x})
   tmID6[[2]] <- llply(tmID6[[2]], function(x) if(length(x)==0){NA}else{x})
@@ -219,10 +251,9 @@ makeList <- function(mbase, spboData, levDist=0.1, parallel=FALSE){
                   mt %>% data.frame %>% tbl_df
               })})
   
-  dfm <- llply(df.agrep, rbind_all) %>% rbind_all %>% cbind(Sex=str_extract_all(names(unlist(tmID6)),
-           '\\S+(?=\\.)') %>% unlist,List=str_extract_all(names(unlist(tmID6)),
-           '(?<=\\.)(U+\\d{2}|[a-zA-Z\\s]{1,})') %>% unlist,tmID=unlist(tmID6),.) %>% tbl_df %>% 
-           filter(!is.na(tmID))
+  dfm <- llply(df.agrep, rbind_all) %>% rbind_all %>% cbind(Sex=substr(names(unlist(tmID6)),1,2),
+         List=str_replace_all(substring(names(unlist(tmID6)),4),'\\.\\S+','') %>% unlist,
+         tmID=unlist(tmID6),.) %>% tbl_df %>% filter(!is.na(tmID))
   rm(len, mx)
   
   matchbase <- data.frame(tmID=c(tmID1A,tmID2A),spbo=c(spboTM1A,spboTM2A),match=c(rep('Duplicate',
