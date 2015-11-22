@@ -52,12 +52,12 @@ dateID <- sort(unique(mbase$datasets$Date))
 
 mbase$datasets %>% datatable(.,extensions = 'TableTools', options = list(
     dom = 'T<"clear">lfrtip',
-    tableTools = list(sSwfPath = copySWF())
+    tableTools = list(sSwfPath=copySWF(pdf=TRUE))
   )
 )
 ```
 
-I just simply refer to <http://rstudio.github.io/DT/extensions.html> and also <http://datatables.net/reference/option/dom> and casually wrote the code, the outcome is statisfied but the `TableTools` button **Copy**, **CSV**, **Excel** doesn't work but only **Print**. Any solution?
+I just simply refer to <http://rstudio.github.io/DT/extensions.html> and also <http://datatables.net/reference/option/dom>, <https://rstudio.github.io/DT/003-tabletools-buttons.html> and casually wrote the code, the outcome is statisfied but the `TableTools` button **Copy**, **CSV**, **Excel** doesn't work but only **Print**. Any solution?
 
 ```{r}
 #'@ mbase$datasets %>% datatable(.,extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='CT<"clear">Rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))

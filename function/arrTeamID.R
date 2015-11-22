@@ -27,11 +27,10 @@ arrTeamID <- function(mbase, spboData, method=c('osa','lv','dl','hamming',
   #'@ parallel=TRUE ## parallel=FALSE will spend above 30 minutes, but parallel=TRUE will hanging
   df2 <- llply(seq(nrow(dfm$partialData)), function(i){
            stringdistList(method=method, tmID_A=dfm$partialData$tmID[i], 
-                     tmID_B=as.character(na.omit(unlist(dfm$partialData[i,4:ncol(dfm$partialData)]))),
-                     parallel=parallel)
+                     tmID_B=na.omit(unlist(dfm$partialData[i,4:ncol(dfm$partialData)])),parallel=parallel)
+           },.parallel=parallel) %>% rbind_all
                      ## levDist=0.1 depreciated but auto turned to Inf, here I omit to set levDist
-         },.parallel=parallel) %>% rbind_all
-  
+         
   df1 <- dfm$matchData %>% .[2:ncol(.)] %>% as.list %>% rep(.,10) %>% 
          data.frame(dfm$matchData[,1],.) %>% tbl_df
   names(df1) <- names(df2)

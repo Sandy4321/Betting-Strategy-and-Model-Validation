@@ -1,5 +1,5 @@
 stringdistList <- function(method=c('osa','lv','dl','hamming','lcs','qgram','cosine','jaccard','jw','soundex'), 
-                           tmID_A, tmID_B, parallel=FALSE) {
+                           tmID_A=as.character(tmID_A), tmID_B=as.character(tmID_B), parallel=FALSE) {
   ## levDist=Inf, levDist=0.1 stringdist() depreciated and auto turned to maxDist=Inf, here I omit to set levDist
   ## 
   ## Apply stringdist() to match the most approximate matching team names
@@ -55,32 +55,29 @@ stringdistList <- function(method=c('osa','lv','dl','hamming','lcs','qgram','cos
   ## Refer the above link to maximized the likelihood of approximate matching by while loop. However the 
   ##   maxDist has been depreciated. Therefore more data will generate a more accurate matching result. 
   ## 
-  dm <- expand.grid(tmID_A,tmID_B) # Distance matrix in long form
-  names(dm) <- c('teamID','spboID')
+  dm <- expand.grid(teamID=tmID_A, spboID=tmID_B) # Distance matrix in long form
   dm$dist <- stringdist(names(dm$teamID),names(dm$spboID), method=method)
   ## String edit distance (use your favorite function here)
   
   ## ---------------------------------------------------------------------------------------------
   ## Greedy assignment heuristic (Your favorite heuristic here)
-  greedyAssign <- function(a,b,dm){
-    x <- numeric(length(names(a))) # assign variable: 0 for unassigned but assignable, 
+  greedyAssign <- function(dm){
+    x <- numeric(length(names(dm$teamID))) # assign variable: 0 for unassigned but assignable, 
     # 1 for already assigned, -1 for unassigned and unassignable
     while(any(x==0)){
-      min_dm <- min(dm[x==0]) # identify closest pair, arbitrarily selecting 1st if multiple pairs
-      a_sel <- a[dm==min_dm & x==0][1]
-      b_sel <- b[dm==min_dm & a == a_sel & x==0][1] 
-      x[a==a_sel & b == b_sel] <- 1
-      x[x==0 & (a==a_sel|b==b_sel)] <- -1
+      min_dm <- min(dm$dist[x==0]) # identify closest pair, arbitrarily selecting 1st if multiple pairs
+      a_sel <- dm$teamID[dm$dist==min_dm & x==0][1]
+      b_sel <- dm$spboID[dm$dist==min_dm & dm$teamID == a_sel & x==0][1] 
+      x[dm$teamID==a_sel & dm$spboID == b_sel] <- 1
+      x[x==0 & (dm$teamID==a_sel|dm$spboID==b_sel)] <- -1
     }
-    cbind(a=a[x==1],b=b[x==1],dm=dm[x==1])
+    data.frame(teamID=dm$teamID[x==1],spboID=dm$spboID[x==1],dist=dm$dist[x==1])
   }
-  
   ## ---------------------------------------------------------------------------------------------
   strList <- llply(as.list(method),function(x){
-    res <- data.frame(greedyAssign(as.character(dm$teamID),as.character(dm$spboID),dm$dist)) %>% tbl_df
+    res <- greedyAssign(dm) %>% data.frame %>% tbl_df
     names(res) <- c('teamID',x,paste0('dist.',x))
     return(res)
-    },.parallel=parallel)
+    },.parallel=parallel) %>% Reduce(function(x, y) merge(x, y, by='teamID'), .) %>% tbl_df
   
-  strList <- Reduce(function(x, y) merge(x, y, by='teamID'), strList) %>% tbl_df
   return(strList)}

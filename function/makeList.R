@@ -256,8 +256,8 @@ makeList <- function(mbase, spboData, levDist=0.1, parallel=FALSE){
          tmID=unlist(tmID6),.) %>% tbl_df %>% filter(!is.na(tmID))
   rm(len, mx)
   
-  matchbase <- data.frame(tmID=c(tmID1A,tmID2A),spbo=c(spboTM1A,spboTM2A),match=c(rep('Duplicate',
-               length(tmID1A)),rep('Partial',length(tmID2A)))) %>% tbl_df
+  matchbase <- data.frame(tmID=c(tmID1A,tmID2A),spbo=c(spboTM1A,spboTM2A),match=as.numeric(c(rep(0,
+               length(tmID1A)),rep(1,length(tmID2A))))) %>% tbl_df
   
   return(list(tmID=tmID6,spbo=spboTM6,matchData=matchbase,partialData=dfm,partialDataList=tm))
 }

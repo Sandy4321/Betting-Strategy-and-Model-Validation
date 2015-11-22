@@ -79,7 +79,7 @@ dateID <- sort(unique(mbase$datasets$Date))
 
 ## example of the dataset in the research paper
 ##   due to the data heavy and overload ,max 5mb while generated 79mb html file, here I just simply subset the head section
-mbase$datasets %>% head %>% datatable(.,caption="Table 2.1 : Soccer Staking Data from Firm A",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
+mbase$datasets %>% head %>% datatable(.,caption="Table 2.1 : Soccer Staking Data from Firm A",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 *table 2.1* `r paste(unlist(strsplit(as.character(dim(mbase$datasets)),' ')), collapse=' x ')`
@@ -94,7 +94,7 @@ source(paste0(getwd(),'/function/readSPBO2.R'))
 spboData <- readSPBO2(dateID=dateID, parallel=FALSE)
 ## example of the scrapped livescore dataset in the research paper
 ##   due to the data heavy and overload ,max 5mb while generated 79mb html file, here I just simply subset the head section
-spboData %>% head %>% datatable(.,caption="Table 2.2 : SPBO Soccer Data",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
+spboData %>% head %>% datatable(.,caption="Table 2.2 : SPBO Soccer Data",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 *table 2.2* `r paste(unlist(strsplit(as.character(dim(spboData)),' ')), collapse=' x ')`
@@ -127,7 +127,7 @@ rbind(df1 %>% filter(pass=='Duplicated') %>% head(3),df1 %>% filter(pass=='Capit
 *table 3.1.1* `r paste(unlist(strsplit(as.character(dim(df1)),' ')), collapse=' x ')`
 
 
-### 3.2 Apply stringdist()
+### 3.2 Apply amatch() and stringdist()
 
   There has a concern which is noramlly second teams' name must be exactly same with first team but only add II, reserved etc to the first team name, for example : *Mainz 05* is first team but not fifth reserved team. More soccer matches data scrapped will be more accurate, for example if we only scrapped one day data, how can we matching the first team if let say only Chelsea reserved team play on that particular date.
   
@@ -135,7 +135,7 @@ rbind(df1 %>% filter(pass=='Duplicated') %>% head(3),df1 %>% filter(pass=='Capit
   
   Besides, if I set the priority of matching the kick-off date and later team names, it will be a concern of possibilities of postponed staked matches (postponed after firm A placed bets, sometimes firm A will placed bets on Early market or the kick-off date accidentially changed/postponed before kick-off due to snowing/downpour/etc).
   
-  I load the [`stringdist`](https://cran.r-project.org/web/packages/stringdist/index.html) package to apply the algorithmic matching the team names.
+  I load the [`stringdist`](https://cran.r-project.org/web/packages/stringdist/index.html) package to apply the algorithmic matching `amatch()` the team names.
   
   * 01. [osa](https://en.wikipedia.org/wiki/Optimal_string_alignment) - Optimal string aligment, (restricted Damerau-Levenshtein distance).
   * 02. [lv](https://en.wikipedia.org/wiki/Levenshtein_distance) - Levenshtein distance (as in R’s native adist).
@@ -190,7 +190,7 @@ len <- n-len
 
 df2A <- mapply(function(x,y) c(x, rep(NA, y)), lst, len) %>% data.frame %>% mutate(Matching1='Lincoln',Matching2='Lincoln City',method=method) %>% select(Matching1,method,uniqueID_0.1,allElems_0.1,uniqueID_0.5,allElems_0.5,uniqueID_1.0,allElems_1.0,uniqueID_2.0,allElems_2.0,uniqueID_Inf,allElems_Inf) %>% tbl_df
 rm(lst,len,n)
-df2A %>% datatable(.,caption="Table 3.2.1 : StringDist Matching 'Lincoln' ",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
+df2A %>% datatable(.,caption="Table 3.2.1 : StringDist Matching 'Lincoln' ",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 *table 3.2.1* `r paste(unlist(strsplit(as.character(dim(df2A)),' ')), collapse=' x ')`
@@ -215,7 +215,7 @@ len <- n-len
 
 df2B <- mapply(function(x,y) c(x, rep(NA, y)), lst, len) %>% data.frame %>% mutate(Matching1='Lincoln',Matching2='Lincoln City',method=method) %>% select(Matching1,method,uniqueID_0.1,allElems_0.1,uniqueID_0.5,allElems_0.5,uniqueID_1.0,allElems_1.0,uniqueID_2.0,allElems_2.0,uniqueID_Inf,allElems_Inf) %>% tbl_df
 rm(lst,len,n)
-df2B %>% datatable(.,caption="Table 3.2.2 : StringDist Matching 'Lincoln City' ",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
+df2B %>% datatable(.,caption="Table 3.2.2 : StringDist Matching 'Lincoln City' ",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 *table 3.2.2* `r paste(unlist(strsplit(as.character(dim(df2B)),' ')), collapse=' x ')`
@@ -253,7 +253,7 @@ df3 %>% kable(.,caption='table 3.3.1')
 source(paste0(getwd(),'/function/partialMatch.R'))
 df4 <- partialMatch(iconv(teamID), spboTeamID)
 #'@ rbind(df4 %>% filter(pass=='Duplicate') %>% head(3),df4 %>% filter(pass=='Partial') %>% head(3)) %>% kable
-df4 %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
+df4 %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
   Below table simply display few matched teams' name which are not accurate.
@@ -306,7 +306,7 @@ d3data[3:4] %>% simpleNetwork(.,width='auto', height=800)
   Here I tried to `split` teams' name into list and simply apply `grep` and `agrep` to apply first filtering.
 
 ```{r matching-05B, echo=FALSE, results='asis'}
-dfm$partialData %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
+dfm$partialData %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 
@@ -317,7 +317,7 @@ dfm$partialData %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' N
 ```{r stringdist, echo=FALSE, results='asis'}
 source(paste0(getwd(),'/function/arrTeamID.R'))
 strDF <- arrTeamID(mbase, spboData, levDist=0.1, parallel=FALSE)
-strDF$result %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
+strDF$result %>% datatable(.,caption="Table 3.4.1 : Partial Matching Teams' Name.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
 From the above table, I've matching the teams' name which is Section 2 Dataset inside [Betting Strategy and Model Validation](https://github.com/englianhu/Betting-Strategy-and-Model-Validation/blob/master/Betting%20Strategy%20and%20Model%20Validation.Rmd). Here I apply method = `r method` inside the `stringdist` function. You are feel free to apply the function to scrap and also re-arrange the teams' name and soccer scores data for your own odds price modelling.
