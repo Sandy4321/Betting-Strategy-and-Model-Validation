@@ -1,12 +1,12 @@
 readfirmDatasets <- function(years=years, parallel=FALSE){
-  require('plyr',quietly=TRUE)
-  require('dplyr',quietly=TRUE)
-  require('stringr',quietly=TRUE)
-  require('doParallel',quietly=TRUE)
+  library('BBmisc')
+  pkgs <- c('plyr','dplyr','stringr','lubridate')
+  suppressAll(lib(pkgs)); rm(pkgs)
   
   if(parallel==TRUE){
     ## Preparing the parallel cluster using the cores
     ## Set parallel computing
+    suppressPackageStartupMessages(require('doParallel',quietly=TRUE))
     #'@ cl <- makePSOCKcluster(3)
     doParallel::registerDoParallel(cores = 3)
     #' @BiocParallel::register(MulticoreParam(workers=2))
@@ -76,7 +76,7 @@ readfirmDatasets <- function(years=years, parallel=FALSE){
   dfm$HKPrice <- dfm$EUPrice-1
   rm(mx, mlist, matchID, InPlay)
   dfm <- tbl_df(dfm[c('No','Sess','Day','DateUK','Date','Time','Home','Away','Selection','HCap','EUPrice','Stakes','CurScore','Mins','Result','PL','Rebates')])
-  dfm <- llply(dfm, function(x){gsub('^\\s{1,}|\\s{1,}$','',x)},.parallel=parallel) %>% data.frame %>% tbl_df
+  dfm <- llply(dfm, function(x){gsub('^\\s{1,}|\\s{1,}$','',x)},.parallel=parallel) %>% data.frame %>% tbl_df %>% mutate(DateUK=ymd_hms(DateUK))
   res <- list(datasets=dfm,others=others,corners=corners)
   
   ## change all columns' class at once, might rewrite the codes during free time

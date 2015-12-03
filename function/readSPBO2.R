@@ -1,8 +1,8 @@
 readSPBO2 <- function(dateID=dateID, parallel=FALSE){
   ## Loading the packages
-  suppressPackageStartupMessages(require('plyr',quietly=TRUE))
-  suppressPackageStartupMessages(require('dplyr',quietly=TRUE))
-  suppressPackageStartupMessages(require('stringr',quietly=TRUE))
+  library('BBmisc')
+  pkgs <- c('plyr','dplyr','stringr','lubridate')
+  suppressAll(lib(pkgs)); rm(pkgs)
   
   if(parallel==TRUE){
     ## Preparing the parallel cluster using the cores
@@ -32,7 +32,7 @@ readSPBO2 <- function(dateID=dateID, parallel=FALSE){
   
   dfm <- tbl_df(data.frame(dfm[c('No','X','matchID','LeagueColor','League','DateUK','Date',
         'Time','Finished','Home','Away','FTHG','FTAG','HTHG','HTAG','H.Card','A.Card','HT.matchID',
-        'HT.graph1','HT.graph2')]))
+        'HT.graph1','HT.graph2')])) %>% mutate(DateUK=ymd_hms(DateUK))
   
   return(dfm)
 }
