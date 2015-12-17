@@ -27,7 +27,8 @@ scrapSPBO <- function(lnk=lnk, dateID=dateID, path=path){
   #'@ unregister <- function() {
   #'@   env <- foreach:::.foreachGlobals
   #'@   rm(list=ls(name=env), pos=env)}
-
+  
+  #'@ df1 %>% mutate_each(funs(as.character))
   vbase <- llply(i,function(i){
     dataElem <- html_session(lnk[i]) %>% html_nodes('script') %>% .[[1]] %>% html_text %>% str_split(',') %>%
               .[[1]] %>% str_extract_all(.,'[#0-9a-zA-Z].*') %>% .[sapply(.,length)==1] %>%

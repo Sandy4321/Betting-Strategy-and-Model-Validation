@@ -34,7 +34,7 @@ arrTeamID <- function(mbase, spboData, method=c('osa','lv','dl','hamming',
   df1 <- dfm$matchData %>% .[2:ncol(.)] %>% as.list %>% rep(.,10) %>% 
          data.frame(dfm$matchData[,1],.) %>% tbl_df
   names(df1) <- names(df2)
-  dfm <- rbind(df1,df2)
+  dfm <- rbind(df1,df2) %>% mutate_each(funs(as.character))
   rm(df1,df2)
   
   return(list(result=dfm, method=method, levDist=levDist))

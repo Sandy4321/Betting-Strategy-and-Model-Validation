@@ -1,77 +1,101 @@
-arrfirmDatasets <- function(dfList, lProfile=c(AH=0.10,OU=0.12)){
+arrfirmDatasets <- function(dfmList, lProfile=c(AH=0.10,OU=0.12), parallel=FALSE){
   ## Here I take the majority leagues setting profile which are "league-10-12"
   ## fMYPriceB = Back with vigorish price; fMYPriceL = Lay with vigorish price
   ## Here we term as Fair Odds
   
-  require('stringr',quietly=TRUE)
-  require('doParallel',quietly=TRUE)
+  ## Loading the packages
+  library('BBmisc')
+  pkgs <- c('magrittr','plyr','dplyr','stringr','lubridate')
+  suppressAll(lib(pkgs)); rm(pkgs)
   
-  df <- dfList$datasets
-  if((is.error(df))|(is.null(df))){
-    stop('Please apply readfirmDatasets() to read the datasets of Sports Consultancy Firm prior to reprocess!')
+  if(parallel==TRUE){
+    ## Preparing the parallel cluster using the cores
+    ## Set parallel computing
+    suppressPackageStartupMessages(require('doParallel',quietly=TRUE))
+    #'@ cl <- makePSOCKcluster(3)
+    doParallel::registerDoParallel(cores = 3)
+    #' @BiocParallel::register(MulticoreParam(workers=2))
+    ## http://www.inside-r.org/r-doc/parallel/detectCores
+    #'@ doParallel::registerDoParallel(makeCluster(detectCores(logical=TRUE)))
+  }
+  
+  dfm <- dfmList$datasets
+  if((is.error(dfm))|(is.null(dfm))){
+    stop('Please apply readfmirmDatasets() to read the datasets of Sports Consultancy Firm prior to reprocess!')
   }else{
-    df$Picked <- sapply(strsplit(as.character(df$Selection),' - '),function(x) x[length(x)])
-    df$AHOU <- factor(ifelse(df$Picked=='over'|df$Picked=='under','OU','AH'))
+    dfm$Picked <- sapply(strsplit(as.character(dfm$Selection),' - '),function(x) x[length(x)])
+    dfm$AHOU <- factor(ifelse(dfm$Picked=='over'|dfm$Picked=='under','OU','AH'))
     lProfile <- lProfile ## League setting profile
     
+    ## Convert EUPrice to HKPrice
+    dfm$HKPrice <- dfm$EUPrice - 1
+    
     ## Convert backed HKPrice to MYPrice in order to calculate the Layed Price
-    df$fMYPriceB <- ifelse(df$HKPrice>1, -1/(df$HKPrice), df$HKPrice)
-    df$fMYPriceL <- ifelse(df$fMYPriceB<0 & df$AHOU=='AH', abs(df$fMYPriceB+lProfile[1]),
-                    ifelse(df$fMYPriceB<=1 & df$fMYPriceB>lProfile[1] & df$AHOU=='AH', 2-df$fMYPriceB-lProfile[1],
-                    ifelse(df$fMYPriceB<=1 & df$fMYPriceB>lProfile[2] & df$AHOU=='OU', 2-df$fMYPriceB-lProfile[2],
-                    ifelse(df$fMYPriceB<0 & df$AHOU=='OU', abs(df$fMYPriceB+lProfile[2]), 0))))
-    df$fMYPriceL <- ifelse(df$fMYPriceL>1, -1/(df$fMYPriceL), df$fMYPriceL)
+    dfm$fMYPriceB <- ifelse(dfm$HKPrice>1, round(-1/(dfm$HKPrice),3), round(dfm$HKPrice,3))
+    dfm$fMYPriceL <- ifelse(dfm$fMYPriceB<0 & dfm$AHOU=='AH', abs(dfm$fMYPriceB+lProfile[1]),
+                     ifelse(dfm$fMYPriceB<=1 & dfm$fMYPriceB>lProfile[1] & dfm$AHOU=='AH', 2-dfm$fMYPriceB-lProfile[1],
+                     ifelse(dfm$fMYPriceB<=1 & dfm$fMYPriceB>lProfile[2] & dfm$AHOU=='OU', 2-dfm$fMYPriceB-lProfile[2],
+                     ifelse(dfm$fMYPriceB<0 & dfm$AHOU=='OU', abs(dfm$fMYPriceB+lProfile[2]), 0))))
+    dfm$fMYPriceL <- ifelse(dfm$fMYPriceL>1, round(-1/(dfm$fMYPriceL),3), round(dfm$fMYPriceL,3))
   
     ## A price listing which summarise the min to mx of Price backed by firm A on agency A
-    mPrice <- unique(df[c('EUPrice','HKPrice','fMYPriceB')])
+    mPrice <- unique(dfm[c('EUPrice','HKPrice','fMYPriceB')])
     mPrice <- mPrice[order(mPrice$EUPrice, decreasing=FALSE),]
-    df$pHKRange <- cut(df$HKPrice, seq(floor(min(mPrice$HKPrice)), ceiling(max(mPrice$HKPrice)), 0.1))
-    df$fHKPriceL <- ifelse(df$fMYPriceL<0, -1/df$fMYPriceL, df$fMYPriceL)
+    dfm$pHKRange <- cut(dfm$HKPrice, seq(floor(min(mPrice$HKPrice)), ceiling(max(mPrice$HKPrice)), 0.1))
+    dfm$fHKPriceL <- ifelse(dfm$fMYPriceL<0, round(-1/dfm$fMYPriceL,3), round(dfm$fMYPriceL,3))
     
     ## Categorize the selection by either 'favorite' or 'underdog', 'under' or 'over'
-    df$Picked <- factor(ifelse(as.character(df$AHOU)=='AH' & as.numeric(df$HCap)>0,'underdog',
-                        ifelse(as.character(df$AHOU)=='AH' & as.numeric(df$HCap)<0,'favorite',
-                        ifelse(as.character(df$AHOU)=='AH' & as.numeric(df$HCap)==0 &
-                               as.numeric(df$HKPrice)< as.numeric(df$fHKPriceL),'favorite',
-                        ifelse(as.character(df$AHOU)=='AH' & as.numeric(df$HCap)==0 &
-                               as.numeric(df$HKPrice)> as.numeric(df$fHKPriceL),'underdog',
-                        ifelse(as.character(df$AHOU)=='AH' & as.numeric(df$HCap)==0 &
-                               as.numeric(df$HKPrice)==as.numeric(df$fHKPriceL),'favorite', df$Picked))))))
+    dfm$Picked <- factor(ifelse(as.character(dfm$AHOU)=='AH' & as.numeric(dfm$HCap)>0,'underdog',
+                        ifelse(as.character(dfm$AHOU)=='AH' & as.numeric(dfm$HCap)<0,'favorite',
+                        ifelse(as.character(dfm$AHOU)=='AH' & as.numeric(dfm$HCap)==0 &
+                               as.numeric(dfm$HKPrice)< as.numeric(dfm$fHKPriceL),'favorite',
+                        ifelse(as.character(dfm$AHOU)=='AH' & as.numeric(dfm$HCap)==0 &
+                               as.numeric(dfm$HKPrice)> as.numeric(dfm$fHKPriceL),'underdog',
+                        ifelse(as.character(dfm$AHOU)=='AH' & as.numeric(dfm$HCap)==0 &
+                               as.numeric(dfm$HKPrice)==as.numeric(dfm$fHKPriceL),'favorite', dfm$Picked))))))
                                
     ## Add an InPlay data range
     ## 1. Cut the time range to be 5 mins interval time
     ##
-    df$InPlay <- factor(ifelse(str_detect(df$Mins,'ET'),'ET',ifelse(str_detect(df$Mins,'No'),'No', 'FT')))
-    df$Mins2 <- gsub('ET','', as.character(df$Mins))
-    df$Mins2 <- factor(ifelse(str_detect(df$Mins2,'HT'),'HT',ifelse(str_detect(df$Mins2,'FT'),'FT',
-                       ifelse(str_detect(df$Mins2,'No'),'No',gsub('[^0-9]','', as.character(df$Mins2))))))
-    df$InPlay2 <- factor(ifelse(df$Mins2=='HT'|df$Mins2=='FT'|df$Mins2==0,'Break', as.character(df$InPlay)))
+    dfm$InPlay <- factor(ifelse(str_detect(dfm$Mins,'ET'),'ET',ifelse(str_detect(dfm$Mins,'No'),'No', 'FT')))
+    dfm$Mins2 <- gsub('ET','', as.character(dfm$Mins))
+    dfm$Mins2 <- factor(ifelse(str_detect(dfm$Mins2,'HT'),'HT',ifelse(str_detect(dfm$Mins2,'FT'),'FT',
+                        ifelse(str_detect(dfm$Mins2,'No'),'No',gsub('[^0-9]','', as.character(dfm$Mins2))))))
+    dfm$InPlay2 <- factor(ifelse(dfm$Mins2=='HT'|dfm$Mins2=='FT'|dfm$Mins2==0,'Break', as.character(dfm$InPlay)))
     
-    df <- ldply(split(df,df$InPlay2), function(x) data.frame(x, ipRange=suppressWarnings(cut(as.numeric(as.character(x$Mins2)),breaks=seq(0,90,5)))))
+    dfm <- llply(split(dfm,dfm$InPlay2), function(x) data.frame(x, ipRange=str_replace_na(suppressWarnings(cut(as.numeric(
+           as.character(x$Mins2)),breaks=seq(0,90,5)))),'No'),.parallel=parallel) %>% rbind_all %>% mutate(
+           ipRange=ifelse(ipRange=='NA',as.character(Mins2),ipRange) %>% ifelse(.==0,as.character(InPlay),.))
     
-    ##
     ## 2. Set the current handicap right before scoring a goal
     ##
-    SC <- ldply(strsplit(ifelse(df$CurScore=='No','0-0', as.character(df$CurScore)),'-'))
+    SC <- ldply(strsplit(ifelse(dfm$CurScore=='No','0-0', as.character(dfm$CurScore)),'-'))
     SC <- data.frame(lapply(SC, as.numeric))
     names(SC) <- c('HG','AG')
-    df$HG <- SC$HG; df$AG <- SC$AG; rm(SC,mPrice)
-      
+    dfm$HG <- SC$HG; dfm$AG <- SC$AG; rm(SC,mPrice)
+    
     ## First half, Full-time or Extra time
-    df$FHFTET <- factor(ifelse(str_detect(df$Home,'1st Half'),'FH', ifelse(str_detect(df$Mins,'ET'),'ET','FT')))
-    df$Picked2 <- factor(ifelse(as.character(df$Selection)==as.character(df$Home),'home',
-                         ifelse(as.character(df$Selection)==as.character(df$Away),'away', as.character(df$Picked))))
-    df$ipHCap <- ifelse(df$Picked2=='over', (df$HG + df$AG) - df$HCap,
-                 ifelse(df$Picked2=='under', df$HCap - (df$HG + df$AG),
-                 ifelse(df$Picked=='favorite' & df$Picked2=='home', (df$HG + df$HCap) - df$AG,
-                 ifelse(df$Picked=='favorite' & df$Picked2=='away', (df$AG + df$HCap) - df$HG,
-                 ifelse(df$Picked=='underdog' & df$Picked2=='home', df$AG - (df$HG + df$HCap),
-                 ifelse(df$Picked=='underdog' & df$Picked2=='away', df$HG - (df$AG + df$HCap), NA))))))
-    #'@ df[c('Picked','Picked2','ipRange','FHFTET','AHOU','HCap','HKPrice','CurScore','ipHCap')]
-    dfList$datasets <- df
-    return(dfList)
+    dfm$FHFTET <- factor(ifelse(str_detect(dfm$Home,'1st Half'),'FH', ifelse(str_detect(dfm$Mins,'ET'),'ET','FT')))
+    dfm$Picked2 <- factor(ifelse(as.character(dfm$Selection)==as.character(dfm$Home),'home',
+                         ifelse(as.character(dfm$Selection)==as.character(dfm$Away),'away', as.character(dfm$Picked))))
+    dfm$ipHCap <- ifelse(dfm$Picked2=='over', (dfm$HG + dfm$AG) - dfm$HCap,
+                 ifelse(dfm$Picked2=='under', dfm$HCap - (dfm$HG + dfm$AG),
+                 ifelse(dfm$Picked=='favorite' & dfm$Picked2=='home', (dfm$HG + dfm$HCap) - dfm$AG,
+                 ifelse(dfm$Picked=='favorite' & dfm$Picked2=='away', (dfm$AG + dfm$HCap) - dfm$HG,
+                 ifelse(dfm$Picked=='underdog' & dfm$Picked2=='home', dfm$AG - (dfm$HG + dfm$HCap),
+                 ifelse(dfm$Picked=='underdog' & dfm$Picked2=='away', dfm$HG - (dfm$AG + dfm$HCap), NA))))))
+    #'@ dfm[c('Picked','Picked2','ipRange','FHFTET','AHOU','HCap','HKPrice','CurScore','ipHCap')]+
+    
+    bP <- ifelse(dfm$fMYPriceB<0, round(-1/dfm$fMYPriceB,3), round(dfm$fMYPriceB,3))
+    lP <- ifelse(dfm$fMYPriceL<0, round(-1/dfm$fMYPriceL,3), round(dfm$fMYPriceL,3))
+    
+    ## Real Price / Net Price Back convert to net probabilities as applied in Dixon&Coles1996.
+    dfm$netProbB <- round(bP/(bP+lP),4); dfm$netProbL <- round(lP/(bP+lP),4)
+    rm(bP, lP)
+    
+    dfmList$datasets <- dfm
+    return(dfmList)
   }
 }
-
 
 

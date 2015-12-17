@@ -50,7 +50,8 @@ scrapSPBO2 <- function(lnk=lnk, dateID=dateID, path=path, parallel=FALSE){
     
     ## dfm[(dfm[,04]==0)&(dfm[,05]==0),c(07,10,12:ncol(dfm))] <- dfm[(dfm[,04]==0)&(dfm[,05]==0),c(06,07,08:11)]
     if((dfm[,04]==0)&(dfm[,05]==0)){
-      dfm[(dfm[,04]==0)&(dfm[,05]==0),c((ncol(dfm)-8),(ncol(dfm)-5),(ncol(dfm)-3):ncol(dfm))] <- dfm[(dfm[,04]==0)&(dfm[,05]==0),c(06:(ncol(dfm)-4))]
+      dfm[(dfm[,04]==0)&(dfm[,05]==0),c((ncol(dfm)-8),(ncol(dfm)-5),(ncol(dfm)-3):ncol(dfm))] <- dfm[(dfm[,04]==0)&
+      (dfm[,05]==0),c(06:(ncol(dfm)-4))]
       dfm[(dfm[,04]==0)&(dfm[,05]==0),c(06,08,09)] <- 0 # no card since match have'nt started
     }
     if((dfm[,04]!=0)&(nchar(dfm[,04])==1)){
@@ -91,7 +92,8 @@ scrapSPBO2 <- function(lnk=lnk, dateID=dateID, path=path, parallel=FALSE){
     #'@ }
 
     ## Replace all space which at the first and also last character inside elements.
-    dfm <- llply(dfm, function(x){gsub('^\\s{1,}|\\s{1,}$','',x)},.parallel=parallel) %>% data.frame %>% tbl_df
+    dfm <- llply(dfm, function(x){gsub('^\\s{1,}|\\s{1,}$','',x)},.parallel=parallel) %>% data.frame %>% 
+      tbl_df %>% mutate_each(funs(as.character))
     
     ## Save livescores data into folder
     dir.create(file.path(paste0(getwd(),'/datasets/',path)))

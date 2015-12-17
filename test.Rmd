@@ -5,120 +5,160 @@ date: "October 25, 2015"
 output: html_document
 ---
 
-```{r load-packages, include=FALSE}
-## You can write as ```{r load-packages, include=FALSE} if you want to hide the particular chunk
-## Setting to omitt all warnings
-options(warn=-1)
-
-## Loading the packages
-if(!'devtools' %in% installed.packages()){
-  install.packages('devtools')}
-if(!'BBmisc' %in% installed.packages()){
-  install.packages('BBmisc')}
-
-suppressPackageStartupMessages(library('BBmisc'))
-pkgs <- c('devtools','stringr','stringi','reshape','reshape2','data.table','sparkline','DT','plyr','dplyr','magrittr','foreach','doParallel','rmarkdown','tidyr','gtable','grid','gridExtra','pander','stringdist','knitr','rmarkdown','lubridate','d3Network','networkD3','htmlTable')
-suppressAll(lib(pkgs)); rm(pkgs)
-```
 
 Testing output of the coding.
 
-```{r setting, include=FALSE}
+```{r load-packages}
+## ,include=FALSE}
+## Setup Options, Loading Required Libraries and Preparing Environment
+## Setup `knitr` options and loading the required libraries.
+
+## Setting to omit all warnings
+options(warn=-1)
+
+## Loading the packages
+if(!suppressPackageStartupMessages(require('devtools'))){
+  install.packages('devtools')}
+if(!suppressPackageStartupMessages(require('BBmisc'))){
+  install.packages('BBmisc')}
+if(!suppressPackageStartupMessages(require('BiocParallel'))){
+  devtools::install_github('Bioconductor/BiocParallel')}
+
+## http://www.r-bloggers.com/new-package-dplyrr-utilities-for-comfortable-use-of-dplyr-with-databases
+## direct connect to database (if any)
+#' @if(!'dplyrr' %in% installed.packages()){
+#' @  devtools::install_github("hoxo-m/dplyrr")}
+#' @install.packages('nycflights13')
+#' @library(c('dplyrr','nycflights13'))
+
+suppressPackageStartupMessages(library('BBmisc'))
+pkgs <- c('devtools','zoo','chron','stringr','stringi','reshape','reshape2','data.table','sparkline','DT','plyr','dplyr','magrittr','foreach','manipulate','ggplot2','ggthemes','proto','extrafont','directlabels','PerformanceAnalytics','plotly','doParallel','rvest','highlightHTML','knitr','rmarkdown','scales','lubridate','tidyr','whisker','gtable','grid','gridExtra','pander','arules','arulesViz','googleVis')
+#'@ c('memoise','RStudioAMI','parallel','BiocParallel','RSelenium','doMC','editR') #load if needed
+suppressAll(lib(pkgs)); rm(pkgs)
+```
+
+```{r setting}
+## Creating a parallel computing Cluster and support functions.
+
 ## Preparing the parallel cluster using the cores
 doParallel::registerDoParallel(cores = 16)
-#' @BiocParallel::register(MulticoreParam(workers=2))
+#' @BiocParallel::register(MulticoreParam(workers=8))
 
-## Make pretty table
-## http://kbroman.org/knitr_knutshell/pages/figs_tables.html
 ## knitr configuration
 opts_knit$set(progress=FALSE)
 opts_chunk$set(echo=TRUE, message=FALSE, tidy=TRUE, comment=NA, fig.path="figure/", fig.keep="high", fig.width=10, fig.height=6, fig.align="center")
 
 ## Table width setting
 panderOptions('table.split.table', Inf)
+
+## Setup plotly API
+Sys.setenv('plotly_username'='englianhu')
+Sys.setenv('plotly_api_key'='xxxxxxxxx')
+
+# Set the googleVis options first to change the behaviour of plot.gvis, so that only the chart component of the HTML file is written into the output file.
+op <- options(gvis.plot.tag='chart')
 ```
 
-```{r read-datasetA, echo=TRUE, results='asis'}
+
+### 2.1 Collect and Reprocess the Dataset
+
+  I collect the dataset of World Wide soccer matches from year 2011 until 2015 from a British betting consultancy named firm A. All bets placed by display on HK currency, and the odds price also measure based on Hong Kong price.
+  
+  I tried to apply `RSelenium` on [**RStudio Server Centos7**](http://rstudio.scibrokes.com) to scrape the data from livescore website includes the odds price but the binary [phantomjs](https://github.com/ariya/phantomjs/issues/12948#issuecomment-131267076) is not available for Linux, and I also not familiar with the installation of `Java` as well as setting of the path for `rJava`. Kindly refer to [Natural Language Analysis](http://rpubs.com/englianhu/natural-language-analysis) for more information about the teams name matching.
+
+```{r read-data-summary-table, results='asis'}
 ## Read the datasets
 ## Refer to **Testing efficiency of coding.Rmd** at chunk `get-data-summary-table-2.1`
 source(paste0(getwd(),'/function/readfirmDatasets.R'))
+source(paste0(getwd(),'/function/arrfirmDatasets.R'))
 years <- seq(2011,2015)
-mbase <- readfirmDatasets(years=years)
-dateID <- sort(unique(mbase$datasets$Date))
-#'@ pander(head(mbase$datasets)) ## exactly same layout with kable(x)
 
-## example of the dataset from firm A + spbo result in the research paper
-##   due to the data heavy and overload ,max 5mb while generated 79mb html file, here I just simply subset the head section
+## Here I take the majority leagues setting profile which are "league-10-12"
+## fMYPriceB = Back with vigorish price; fMYPriceL = Lay with vigorish price
+## Here we term as Fair Odds
+lProfile <- c(AH=0.10,OU=0.12)
 
-mbase$datasets %>% datatable(.,extensions = 'TableTools', options = list(
-    dom = 'T<"clear">lfrtip',
-    tableTools = list(sSwfPath=copySWF(pdf=TRUE))
-  )
-)
+mbase <- readfirmDatasets(years=years) %>% arrfirmDatasets(., lProfile=lProfile)
+
+#'@ pander(head(mbase$datasets)) # exactly same layout with kable(x)
+#'@ kable(head(mbase$datasets)) ## example of the dataset in the research paper
+
+#'@ mbase$datasets %>% datatable(.,caption="Table 2.1.1 : Firm A Staking Data",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
 ```
 
-I just simply refer to <http://rstudio.github.io/DT/extensions.html> and also <http://datatables.net/reference/option/dom>, <https://rstudio.github.io/DT/003-tabletools-buttons.html> and casually wrote the code, the outcome is statisfied but the `TableTools` button **Copy**, **CSV**, **Excel** doesn't work but only **Print**. Any solution?
+  Please refer to [Natural Language Analysis](http://rpubs.com/englianhu/natural-language-analysis) to see the firm A staking sample dataset.
+
+```{r scrap-data, results='asis'}
+## Scrape the leagues and also overrounds which provides by a sportsbookmaker named Firm B
+#'@ lnk <- 'http://data.nowgoal.com/history/handicap.htm'
+## Above website provides odds price history but sendkeyElements cannot work in RSelenium, will follow-up
+## https://github.com/ropensci/RSelenium/issues/55
+## Therefore scrape spbo link to know the league of matches
+
+## Besides, need to scrap the final-scores / half-time scores / result of soccer matches
+dateID <- sort(unique(mbase$datasets$Date)); spboDate <- gsub('-','',dateID)
+#'@ lnk <- paste0('http://www8.spbo.com/history.plex?day=',spboDate,'&l=en')
+
+## Due to the scrapSPBO function scrapped unmatched data, example lnk[827],
+##  therefore I rewrite the function as scrapSPBO2
+#'@ source(paste0(getwd(),'/function/scrapSPBO2.R'))
+#'@ scrapSPBO2(lnk=lnk, dateID=dateID, path='livescore', parallel=TRUE)
+
+## Load the scraped spbo livescore datasets.
+source(paste0(getwd(),'/function/readSPBO2.R'))
+spboData <- readSPBO2(dateID=dateID, parallel=FALSE)
+
+## Apply stringdist() to 'exactly matching' and 'approximate matching' team names
+#'@ method <- c('osa','lv','dl','hamming','lcs','qgram','cosine','jaccard','jw','soundex')
+#'@ source(paste0(getwd(),'/function/arrTeamID.R'))
+#'@ tmID <- arrTeamID(mbase, spboData, parallel=FALSE)
+tmIDdata <- read.csv(paste0(getwd(),'/datasets/teamID.csv'), header=TRUE, sep=',') %>% mutate_each(funs(as.character)) %>% tbl_df %>% filter(spbo!='Kuban Krasnodar')
+spboData %<>% filter((Home %in% tmIDdata$spbo)|(Away %in% tmIDdata$spbo))
+```
+  
+
+## 3. Analyse the Staking Model
+
+
+### 3.1 Analyse the Annual Stakes
+
+  Before we start analyse the staking model, we are firstly see the monthly Stakes and Profit & Lose of the Agency A.
+
+```{r data-month-summary-plots, results='asis'}
+## Before we start analyse the staking model, we are firstly see the monthly Stakes and Profit & Lose of the Agency A
+## the stakes amount display as $1 = $10,000
+#'@ zoo::as.yearmon(mbase$Date,'%b')
+#'@ chron::cut_date()
+m <- ddply(data.frame(Month=as.yearmon(mbase$datasets$Date,'%b'),mbase$datasets), .(Sess, Month), summarise, Stakes=sum(Stakes)/10000, PL=sum(PL)/10000)
+melted <- melt(m, id.vars=c('Sess','Month')) %>% tbl_df
+#'@ melted$Month2 <- format(melted$Month,'%b')
+
+## http://help.plot.ly/make-a-3D-surface-plot
+## Will doing research on 3D graph some other days.
+gvis.options <- list(hAxis="{title:'Month'}", vAxis="{title:'Stakes(in \'0000)'}",width='automatic', height='automatic')
+line.gvis <- gvisLineChart(xvar="Month", yvar=c("value"), data=melted, options=gvis.options)
+plot(line.gvis)
+print(line.gvis,tag='chart')
+#'@ plots <- suppressWarnings(dlply(melted, .(Sess), function(mb) ggplot(x=factor(Month), y=value, fill=variable, data=mb, geom='bar', stat='identity', position='dodge', color=variable) + ylab("HKD (in '0000)") + theme_pander(base_family='Verdana') + scale_fill_pander() + ggtitle(paste('Monthly Summary ',min(mb$Month),'-',max(mb$Month)))))
+
+#'@ rm(melted, m)
+#'@ do.call(grid.arrange, plots)
+```
 
 ```{r}
-#'@ mbase$datasets %>% datatable(.,extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='CT<"clear">Rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
-
-#'@ #'@ mbase$datasets %>% datatable(.,extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='T|C<"clear">R|lfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
-
-#'@ mbase$datasets %>% datatable(.,extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='T|C<"clear">l|Rfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF()),scrollX=TRUE,scrollCollapse=TRUE))
-
+CC <- gvisComboChart(melted, xvar='Month',
+          yvar=c(value),
+          options=list(seriesType='bars',
+                       width=450, height=300,
+                       title='Monthly Summary',
+                       series='{0: {type:"line"}}'))
+plot(CC)
 ```
 
-Thanks lot...
+*graph 3.1.1*
 
-```{r read-datasetB, echo=FALSE, results='asis'}
-## Load the scraped spbo livescore datasets.
-#'@ source(paste0(getwd(),'/function/readSPBO2.R'))
-#'@ spboData <- readSPBO2(dateID=dateID, parallel=FALSE)
-## example of the scrapped livescore dataset in the research paper
-##   due to the data heavy and overload ,max 5mb while generated 79mb html file, here I just simply subset the head section
-#'@ spboData %>% head %>% kable(.,caption='table 2.2')
-```
-
-```{r matching-01, echo=FALSE, results='asis'}
-## Get and filter the teams' name
-## Filter and drop the first-half, corners and other games
-#'@ teamID <- sort(unique(c(as.character(mbase$datasets$Home), as.character(mbase$datasets$Away))))
-#'@ teamID <- teamID[!teamID %in% mbase$others]
-
-#'@ spboTeam <- sort(c(as.vector(spboData$Home), as.vector(spboData$Away)))
-#'@ spboTeamID <- sort(unique(spboTeam))
-
-#'@ df1 <- data.frame(team=teamID[tolower(teamID) %in% tolower(spboTeamID)], spbo=spboTeamID[tolower(spboTeamID) %in% tolower(teamID)]) %>% tbl_df %>% mutate(team=as.character(team),spbo=as.character(spbo),pass=ifelse(team==spbo,'Duplicated','Capital Letters')) %>% arrange(pass)
-#'@ row.names(df1) <- NULL
-
-#'@ rbind(df1 %>% filter(pass=='Duplicated') %>% head(3),df1 %>% filter(pass=='Capital Letters') %>% head(3)) %>% htmlTable(.,format = "html", output = F, align = c("l", "c", "c", "c"), escape=F,table.attr="class='table table-striped table-hover'")
-
-#'@ rbind(df1 %>% filter(pass=='Duplicated') %>% head(3),df1 %>% filter(pass=='Capital Letters') %>%head(3)) %>% kable(.,caption='table 2.2')
-```
-
-```{r matching-05A, echo=FALSE, results='asis'}
-#'@ source(paste0(getwd(),'/function/makeList.R'))
-## Since the elements are not much enough but list quit a number, just set parallel=FALSE will be faster few minutes.
-#'@ dfm <- makeList(mbase, spboData, levDist=0.1, parallel=FALSE)
-```
-
-```{r decission-tree-A, echo=FALSE, results='asis'}
-## Refered `rpart` and `randomForest` to plot the decision tree, showing how to match the teams' name but required numeric data and also static graph.
-## Here I using `d3Network`
-#'@ d3data <- dfm$data %>% data.frame
-#'@ d3data$X1 <- ifelse(is.na(d3data$X1),'NA',d3data$X1)
-#'@ d3data %>% d3SimpleNetwork(.,width='automatic', height=400) ## https://github.com/christophergandrud/d3Network/issues/31
-#'@ d3data %>% as.list %>% d3Tree ## https://github.com/christophergandrud/d3Network/issues/31
-#'@ d3data[1:2] %>% simpleNetwork(.,width=400, height=400)
-```
-
-Since the `simpleNetwork` function only apply to 2 columns dataset, here I split to be 2 graphs.
-
-```{r decission-tree-B, echo=FALSE, results='asis'}
-#'@ d3data[3:4] %>% simpleNetwork(.,width='auto', height=800)
-```
-
-```{r matching-05B, echo=FALSE, results='asis'}
-#'@ datatable(dfm$data)
+```{r, results='asis'}
+## Set options back to original options
+options(op)
 ```
 

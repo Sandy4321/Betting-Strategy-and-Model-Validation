@@ -71,6 +71,7 @@ arrDataElem <- function(dataElem=dataElem, dateID=dateID, i=i, n.col=n.col){
   }else{ stop(paste0('Please select n.col= 11,13,14,15 as the data frames we get from spbo livescore.'))}
   
   ## change the class type to filter out the non-completed or other sports matches
+  #'@ df %>% mutate_each(funs(as.character))
   df$matchID <- as.numeric(as.character(df$matchID))
   df$LeagueColor <- factor(as.character(df$LeagueColor))
   df$League <- factor(as.character(df$League))
