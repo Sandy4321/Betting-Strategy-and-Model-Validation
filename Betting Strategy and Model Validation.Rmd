@@ -1,15 +1,19 @@
 ---
 title: "Betting Strategy and Model Validation (Testing)"
-author: "[Ryo®, Eng Lian Hu](http://englianhu.wordpress.com) <img src='figure/me.JPG' width='24'> TonyStark®"
+author: "[Ryo®, Eng Lian Hu](http://englianhu.wordpress.com) <img src='figure/me.JPG' width='24'> 白戸則道®"
 date: "7/22/2015"
 output:
   html_document:
+    fig_caption: yes
     fig_height: 3
     fig_width: 5
     highlight: haddock
     theme: cerulean
     toc: yes
+  word_document: 
+    fig_caption: yes
   pdf_document:
+    fig_caption: yes
     fig_height: 3
     fig_width: 5
     highlight: haddock
@@ -26,69 +30,18 @@ output:
 
 ## Abstract
 
-  This is an academic research by apply R statistics analysis to an agency A of an existing betting consultancy firm A. According to the [Dixon and Pope (2003)](http://www.sciencedirect.com/science/article/pii/S016920700400010X), due to business confidential and privacy I am also using agency A and firm A in this paper. **The purpose of the anaysis is measure the staking model of the firm A**. For more sample which using R for Soccer Betting see <http://rpubs.com/englianhu>. Here is the references of [rmarkdown](http://rmarkdown.rstudio.com/authoring_basics.html) and [An Introduction to R Markdown](http://rpubs.com/mansun_kuo/24330). You are welcome to read the [Wrangling F1 Data With R](http://www.r-bloggers.com/wrangling-f1-data-with-r-f1datajunkie-book/) if you are getting interest to write a data analysis on Sportsbook.
+  This is an academic research by apply R statistics analysis to an agency A of an existing betting consultancy firm A. According to the [Dixon and Pope (2003)](http://www.sciencedirect.com/science/article/pii/S016920700400010X), due to business confidential and privacy I am also using agency A and firm A in this paper. **The purpose of the anaysis is measure the staking model of the firm A**. For more sample which using R for Soccer Betting see <http://rpubs.com/englianhu>. Here is the references of [rmarkdown](http://rmarkdown.rstudio.com/authoring_basics.html) and [An Introduction to R Markdown](http://rpubs.com/mansun_kuo/24330). You are welcome to read the [Wrangling F1 Data With R](http://www.r-bloggers.com/wrangling-f1-data-with-r-f1datajunkie-book/) if you are getting interest to write a data analysis on Sports-book.
 
-```{r load-packages, include=FALSE}
-## Setup Options, Loading Required Libraries and Preparing Environment
-## Setup `knitr` options and loading the required libraries.
-
-## Setting to omit all warnings
-options(warn=-1)
-
-## Loading the packages
-if(!suppressPackageStartupMessages(require('devtools'))){
-  install.packages('devtools')}
-if(!suppressPackageStartupMessages(require('BBmisc'))){
-  install.packages('BBmisc')}
-if(!suppressPackageStartupMessages(require('BiocParallel'))){
-  devtools::install_github('Bioconductor/BiocParallel')}
-
-## http://www.r-bloggers.com/new-package-dplyrr-utilities-for-comfortable-use-of-dplyr-with-databases
-## direct connect to database (if any)
-#' @if(!'dplyrr' %in% installed.packages()){
-#' @  devtools::install_github("hoxo-m/dplyrr")}
-#' @install.packages('nycflights13')
-#' @library(c('dplyrr','nycflights13'))
-
-suppressPackageStartupMessages(library('BBmisc'))
-pkgs <- c('devtools','zoo','chron','stringr','stringi','reshape','reshape2','data.table','sparkline','DT','plyr','dplyr','magrittr','foreach','manipulate','ggplot2','ggthemes','proto','extrafont','directlabels','PerformanceAnalytics','plotly','doParallel','rvest','highlightHTML','knitr','rmarkdown','scales','lubridate','tidyr','whisker','gtable','grid','gridExtra','pander','arules','arulesViz','googleVis')
-#'@ c('memoise','RStudioAMI','parallel','BiocParallel','RSelenium','doMC','editR') #load if needed
-suppressAll(lib(pkgs)); rm(pkgs)
-```
-
-```{r setting, include=FALSE}
-## Creating a parallel computing Cluster and support functions.
-
-## Preparing the parallel cluster using the cores
-doParallel::registerDoParallel(cores = 16)
-#' @BiocParallel::register(MulticoreParam(workers=8))
-
-## knitr configuration
-opts_knit$set(progress=FALSE)
-opts_chunk$set(echo=TRUE, message=FALSE, tidy=TRUE, comment=NA, fig.path="figure/", fig.keep="high", fig.width=10, fig.height=6, fig.align="center")
-
-## Table width setting
-panderOptions('table.split.table', Inf)
-
-## Setup plotly API
-Sys.setenv('plotly_username'='englianhu')
-Sys.setenv('plotly_api_key'='xxxxxxxxx')
-
-# Set the googleVis options first to change the behaviour of plot.gvis, so that only the chart component of the HTML file is written into the output file.
-op <- options(gvis.plot.tag='chart')
-
-# Define image sizes
-img.width <- 450
-img.height <- 300
-options(RCHART_HEIGHT = img.height, RCHART_WIDTH = img.width)
-opts_chunk$set(fig.width=6, fig.height=4)
+```{r libs, message=FALSE, warning=FALSE, include=FALSE}
+## Loading the packages and setting adjustment
+source(paste0(getwd(),'/function/libs.R'))
 ```
 
 
 
 ## 1. Introduction to the Betting Stategics
 
-  There are quite some betting strategies in sportbook industry. [Value betting](http://www.valuepunter.com/valuebetting.htm) is the popular staking stategy. Money management is the key for betting strategy.
+  There are quite some betting strategies in sport-book industry. [Value betting](http://www.valuepunter.com/valuebetting.htm) is the popular staking strategy. Money management is the key for betting strategy.
 
   The best and the most successful punters are money managers looking for ideal situations, which are defined as matches with only high percentage of return. In individual situations luck will play into the outcome of an event, which no amount of odds compiling can overcome, but in the long run a disciplined punter will win more of those lucky games than lose.
 
@@ -99,15 +52,13 @@ opts_chunk$set(fig.width=6, fig.height=4)
 
 ### 2.1 Collect and Reprocess the Dataset
 
-  I collect the dataset of World Wide soccer matches from year 2011 until 2015 from a British betting consultancy named firm A. All bets placed by display on HK currency, and the odds price also measure based on Hong Kong price.
+  I collect the data-set of World Wide soccer matches from year 2011 until 2015 from a British betting consultancy named firm A. All bets placed by display on HK currency, and the odds price also measure based on Hong Kong price.
   
-  I tried to apply `RSelenium` on [**RStudio Server Centos7**](http://rstudio.scibrokes.com) to scrape the data from livescore website includes the odds price but the binary [phantomjs](https://github.com/ariya/phantomjs/issues/12948#issuecomment-131267076) is not available for Linux, and I also not familiar with the installation of `Java` as well as setting of the path for `rJava`. Kindly refer to [Natural Language Analysis](http://rpubs.com/englianhu/natural-language-analysis) for more information about the teams name matching.
+  I tried to apply `RSelenium` on [**RStudio Server Centos7**](http://rstudio.scibrokes.com) to scrape the data from live-score website includes the odds price but the binary [phantomjs](https://github.com/ariya/phantomjs/issues/12948#issuecomment-131267076) is not available for Linux, and I also not familiar with the installation of `Java` as well as setting of the path for `rJava`. Kindly refer to [Natural Language Analysis](http://rpubs.com/englianhu/natural-language-analysis) for more information about the teams name matching.
 
 ```{r read-data-summary-table, echo=FALSE, results='asis'}
 ## Read the datasets
 ## Refer to **Testing efficiency of coding.Rmd** at chunk `get-data-summary-table-2.1`
-source(paste0(getwd(),'/function/readfirmDatasets.R'))
-source(paste0(getwd(),'/function/arrfirmDatasets.R'))
 years <- seq(2011,2015)
 
 ## Here I take the majority leagues setting profile which are "league-10-12"
@@ -125,17 +76,17 @@ mbase$datasets %>% datatable(.,caption="Table 2.1.1 : Firm A Staking Data",exten
 
 *table 2.1.1* `r paste(unlist(strsplit(as.character(dim(mbase$datasets)),' ')), collapse=' x ')`
 
-  Please refer to [Natural Language Analysis](http://rpubs.com/englianhu/natural-language-analysis) to see the firm A staking sample dataset.
+  Please refer to [Natural Language Analysis](http://rpubs.com/englianhu/natural-language-analysis) to see the firm A staking sample data-set.
 
 
 ### 2.2 Overrounds / Vigorish
 
   **Fair odds**: the odds that would be offered if the sum of the probabilities for all possible outcomes were exactly 1 (100%). For example, supposing we had a market with three possible outcomes {A, B, C} with probabilities of success $P(A) = 0.5, P(B) = 0.4$ and $P(C) = 0.1$, the fair odds would be `2.00`, `2.50`, and `10.00` respectively, which are just the inverse of the estimated probabilities.
 
-  **Overround**: Also called vigorish (or vig for short) in American sports betting, the overround is a measure of the bookmaker’s edge over the gambler. The bookmaker will never offer fair odds on a market. In practice, the payout offered on each selection will be reduced, which in turn increases the reflected probability of an event. When odds have been adjusted in this way the sum of the probabilities for all events will exceed 1 `(100%)`. The overround is the amount by which the sum of all
+  **Overround**: Also called vigorish (or vig for short) in American sports betting, the over-round is a measure of the bookmaker’s edge over the gambler. The bookmaker will never offer fair odds on a market. In practice, the payout offered on each selection will be reduced, which in turn increases the reflected probability of an event. When odds have been adjusted in this way the sum of the probabilities for all events will exceed 1 `(100%)`. The over-round is the amount by which the sum of all
 probabilities exceeds `100%` and it is the bookmaker’s profit margin.
 
-  For example, if we had a market with two possible outcomes {A, B}, where $P(A) = P(B) = 0.5$, the fair odds on each selection would be `2.00`. However, the bookmaker may offer payouts of `1.85` on each selection. The corresponding probabilities for each selection are now 1/1.85 = `r 1/1.85`, and the sum of the probabilities for all outcomes is `r 1/1.85` x 2 = `r 1/1.85*2`. The overround is `8.1%`, and for every `$100` paid out by gamblers the bookmaker expects to make a profit of `8.1` dollars, assuming that there
+  For example, if we had a market with two possible outcomes {A, B}, where $P(A) = P(B) = 0.5$, the fair odds on each selection would be `2.00`. However, the bookmaker may offer payouts of `1.85` on each selection. The corresponding probabilities for each selection are now 1/1.85 = `r 1/1.85`, and the sum of the probabilities for all outcomes is `r 1/1.85` x 2 = `r 1/1.85*2`. The over-round is `8.1%`, and for every `$100` paid out by gamblers the bookmaker expects to make a profit of `8.1` dollars, assuming that there
 are balanced bets on both A and B.
 
 ```{r scrap-data, echo=FALSE, results='asis'}
@@ -154,9 +105,8 @@ dateID <- sort(unique(mbase$datasets$Date)); spboDate <- gsub('-','',dateID)
 #'@ source(paste0(getwd(),'/function/scrapSPBO2.R'))
 #'@ scrapSPBO2(lnk=lnk, dateID=dateID, path='livescore', parallel=TRUE)
 
-## Load the scraped spbo livescore datasets.
-source(paste0(getwd(),'/function/readSPBO2.R'))
-spboData <- readSPBO2(dateID=dateID, parallel=FALSE)
+## scraped spbo livescore datasets.
+spboData <- readSPBO(dateID=dateID, parallel=FALSE)
 
 ## Apply stringdist() to 'exactly matching' and 'approximate matching' team names
 #'@ method <- c('osa','lv','dl','hamming','lcs','qgram','cosine','jaccard','jw','soundex')
@@ -170,7 +120,7 @@ spboData %<>% filter((Home %in% tmIDdata$spbo)|(Away %in% tmIDdata$spbo))
   
 $$P_i^{HK_{Lay}} = 1/P_i^{HK_{Back}}-\nu_{j}$$   *equation 2.2.1*
   
-  While $\nu$ is the vigorish and $j={1,2}$ which are `r names(lProfile)[1]`=`r lProfile[1]` and `r names(lProfile)[2]`=`r lProfile[1]`. I have just simply calculated the Layed Fair odds (Odds Price with Vigorish which offer by operators), here I apply a setting profile which is term as `lProfile` (you can casually edit the soccer match profile setting) to get the Real Odds (Net Odds Price without Vigorish). As well as the Value $Value = Real Price/Fair Odds$. Here we can use the Bet Stake Calculator [Kelly Staking Calculator](http://www.sportsbettingcalculator.co.uk/kelly-staking-calculator/). I simply reverse value $\Re$ to get the esimated $P_{i}^{EM}$ (firm A) by refer to [Section 5 Betting Strategy](http://www.math.ku.dk/~rolf/teaching/thesis/DixonColes.pdf) which we touch in Section 4.1.
+  While $\nu$ is the vigorish and $j={1,2}$ which are `r names(lProfile)[1]`=`r lProfile[1]` and `r names(lProfile)[2]`=`r lProfile[1]`. I have just simply calculated the Layed Fair odds (Odds Price with Vigorish which offer by operators), here I apply a setting profile which is term as `lProfile` (you can casually edit the soccer match profile setting) to get the Real Odds (Net Odds Price without Vigorish). As well as the Value $Value = Real Price/Fair Odds$. Here we can use the Bet Stake Calculator [Kelly Staking Calculator](http://www.sportsbettingcalculator.co.uk/kelly-staking-calculator/). I simply reverse value $\Re$ to get the estimated $P_{i}^{EM}$ (firm A) by refer to [Section 5 Betting Strategy](http://www.math.ku.dk/~rolf/teaching/thesis/DixonColes.pdf) which we touch in Section 4.1.
 
 ```{r data-prob-table1, echo=FALSE, results='asis'}
 ## Calculate the Real Odds (Net Odds Price without Vigorish)
@@ -190,7 +140,7 @@ mbase$datasets %>% head %>% select(No,EUPrice,HKPrice,fHKPriceL,fMYPriceB,fMYPri
 
 *table 2.2.1* `r paste(unlist(strsplit(as.character(dim(mbase$datasets)),' ')), collapse=' x ')`
 
-  *table 2.2.1* just provides some sample about the odds price and overrounds while you can refer to *table 2.1.1* for details.
+  *table 2.2.1* just provides some sample about the odds price and over-round while you can refer to *table 2.1.1* for details.
 
 
 
@@ -198,44 +148,63 @@ mbase$datasets %>% head %>% select(No,EUPrice,HKPrice,fHKPriceL,fMYPriceB,fMYPri
 
 
 ### 3.1 Analyse the Annual Stakes
-
+  
   Before we start analyse the staking model, we are firstly see the monthly Stakes and Profit & Lose of the Agency A.
-
+  
 ```{r data-month-summary-plots, echo=FALSE, results='asis'}
 ## Before we start analyse the staking model, we are firstly see the monthly Stakes and Profit & Lose of the Agency A
 ## the stakes amount display as $1 = $10,000
 #'@ zoo::as.yearmon(mbase$Date,'%b')
 #'@ chron::cut_date()
-m <- ddply(data.frame(Month=as.yearmon(mbase$datasets$Date,'%b'),mbase$datasets), .(Sess, Month), summarise, Stakes=sum(Stakes)/10000, PL=sum(PL)/10000)
-melted <- melt(m, id.vars=c('Sess','Month')) %>% tbl_df
-#'@ melted$Month2 <- format(melted$Month,'%b')
+#'@ m <- ddply(data.frame(Month=as.yearmon(mbase$datasets$Date,'%b'),mbase$datasets), .(Sess, Month), summarise, Stakes=sum(Stakes)/10000, PL=sum(PL)/10000)
+## zoo::yearmon() doesn't work, here I apply `lubridate::year` and `lubridate::month` instead.
+dat <- mbase$datasets %>% mutate(Month=paste(month(Date,label=TRUE),year(Date))) %>% tbl_df
+m <- ddply(dat, .(Sess, Month), summarise, Stakes=sum(Stakes)/10000, PL=sum(PL)/10000) %>% tbl_df
+#'@ melted <- melt(m, id.vars=c('Sess','Month')) %>% tbl_df
 
 ## http://help.plot.ly/make-a-3D-surface-plot
 ## Will doing research on 3D graph some other days.
 gvis.options <- list(hAxis="{title:'Month'}", vAxis="{title:'Stakes(in \'0000)'}",width=img.width, height=img.height)
-line.gvis <- gvisLineChart(xvar="Month", yvar=c("value"), data=melted, options=gvis.options)
+line.gvis <- gvisLineChart(xvar='Month', yvar=c('Stakes','PL'), data=m, options=gvis.options)
 plot(line.gvis)
 
 #'@ plots <- suppressWarnings(dlply(melted, .(Sess), function(mb) ggplot(x=factor(Month), y=value, fill=variable, data=mb, geom='bar', stat='identity', position='dodge', color=variable) + ylab("HKD (in '0000)") + theme_pander(base_family='Verdana') + scale_fill_pander() + ggtitle(paste('Monthly Summary ',min(mb$Month),'-',max(mb$Month)))))
 
-rm(melted, m)
+rm(dat, melted, m)
 #'@ do.call(grid.arrange, plots)
 ```
 
 *graph 3.1.1*
-
-  From the graph above we know that the agency A generate profit every single month by following Sportsbook consultancy firm A.
-
+  
+  From the graph above we know that the agency A generate profit every single month by following sports-book consultancy firm A.
+  
 ```{r data-annum-summary-table, echo=FALSE, results='asis'}
 ## Annual summary
-res <- ldply(split(mbase$datasets, mbase$datasets$Sess), function(x) data.frame(Stakes=sum(x$Stakes), S.median=median(x$Stakes), S.mean=mean(x$Stakes), S.sd=sd(x$Stakes), Count=length(x$PL), Return=sum(x$PL,x$Stakes), PL=sum(x$PL), PL.percent=sum(x$PL)/sum(x$Stakes)))
-names(res)[1] <- 'Sess'
-res %>% kable(.,caption='Table 3.1.1 : Annual Summary of Staking Data.')
+dat <- mbase$datasets %>% tbl_df %>% mutate(Month=month(ymd(Date), label=TRUE))
+
+dt1 <- dat %>% group_by(Sess, Month) %>% summarise(S.total=sum(Stakes/10000), S.median=median(Stakes/10000), S.mean=mean(Stakes/10000), S.sd=sd(Stakes/10000), Count=length(PL/10000), minHKPrcB=min(HKPrice/10000), maxHKPrcB=max(HKPrice/10000), minProbB=min(netProbB), maxProbB=max(netProbB), Return=sum(PL/10000,Stakes/10000), PL=sum(PL/10000), PL.percent=sum(PL/10000)/sum(Stakes/10000), Samples=paste(Stakes/10000, collapse = ",")) %>% mutate(Series = Samples)
+names(dt1)[1] <- 'Sess'
+
+r <- dt1 %>% group_by(Sess, Month) %>% .$Stakes %>% range
+
+line_string <- "type: 'line', lineColor: 'black', fillColor: '#ccc', highlightLineColor: 'orange', highlightSpotColor: 'orange'"
+
+cb_line <- JS(paste0("function (oSettings, json) { $('.spark:not(:has(canvas))').sparkline('html', { ", line_string, ", chartRangeMin: ", r[1], ", chartRangeMax: ", r[2], " }); }"), collapse = "")
+
+box_string <- "type: 'box', lineColor: 'black', whiskerColor: 'black', outlierFillColor: 'black', outlierLineColor: 'black', medianColor: 'black', boxFillColor: 'orange', boxLineColor: 'black'"
+
+cd <- list(list(targets=14, render=JS("function(data, type, full){ return '<span class=sparkSamples>' + data + '</span>' }")), list(targets=15, render=JS("function(data, type, full){ return '<span class=sparkSeries>' + data + '</span>' }")))
+
+cb = JS(paste0("function (oSettings, json) {\n  $('.sparkSeries:not(:has(canvas))').sparkline('html', { ", line_string, " });\n  $('.sparkSamples:not(:has(canvas))').sparkline('html', { ", box_string, " });\n}"), collapse = "")
+
+dt1 %>% datatable(.,caption='Table 3.1.1 : Annual Summary of Staking Data.',extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE, columnDefs=cd, fnDrawCallback=cb))
+dt1$dependencies <- append(dt1$dependencies, htmlwidgets:::getDependency("sparkline"))
+dt1
 ```
 
 *table 3.1.1* `r paste(unlist(strsplit(as.character(dim(res)),' ')), collapse=' x ')`
 
-  From the table above, we realized that the Asian agency A make profit by follow the British sportsbetting consultancy firm A every year. Since thousands of bets (and maximum bet limit setting, league profile setting, and also value betting which properly based on Kelly model, mean value will be kinda bias) placed per anum, here we take median will be accurate than mean value which is more than `HKD200,000` per bet. The **annual profit** around `7~11%`.
+  From the table above, we realized that the Asian agency A make profit by follow the British sports betting consultancy firm A every year. Since thousands of bets (and maximum bet limit setting, league profile setting, and also value betting which properly based on Kelly model, mean value will be kinda bias) placed per anum, here we take median will be accurate than mean value which is more than `HKD200,000` per bet. The **annual profit** around `7~11%`.
 
 ```{r data-annum-summary-plot, echo=FALSE, results='asis'}
 ## Plot multiple layer and labeling y-axis on both left-right side.
@@ -245,12 +214,27 @@ melted <- melt(res[c('Sess','Stakes','Return','PL')], id.vars=c('Sess')) %>% tbl
 ## ... + xlab('Year') + ylab("HKD ('000,000)")
 ## doesn't work in the ggthemes
 #'@ direct.label(ggplot(melted, aes(x=Sess, y=value/1000000, fill=variable, color=variable)) + geom_bar(stat='identity', colour='black', position='dodge') + xlab('Year') + ylab("HKD ('000,000)") + theme_wsj(base_family='Verdana') + scale_colour_wsj('colors6', '') + ggtitle("Annual Turnover and P&L HKD ('000,000)"), list(last.bumpup,hjust=0.45,cex=0.65))
+
 ggplot(melted, aes(x=Sess, y=value/1000000, fill=variable, color=variable)) + geom_bar(stat='identity', colour='black', position='dodge') + xlab('Year') + ylab("HKD ('000,000)") + theme_wsj(base_family='Verdana') + scale_colour_wsj('colors6', '') + ggtitle("Annual Turnover and P&L HKD ('000,000)")
 ```
 
 *graph 3.1.2*
 
-  From the graph above, 
+  From the graph above, we can easily know the figure of Stakes, Returns and Profit & Lose while below table separate into daily breakdown. The table shows the daily stakes and also quantile values.
+
+```{r data-daily-summary, echo=FALSE, results='asis'}
+dat.t <- dat %>% group_by(Sess, Month, Day) %>% summarise(Mean=round(mean(Stakes),1)/10000, SD=round(sd(Stakes),2)/10000, Min=min(Stakes)/10000, Max=max(Stakes)/10000, Samples=paste(Stakes/10000, collapse=',')) %>% mutate(Series=Samples) %>% tbl_df
+
+cd <- list(list(targets=7, render=JS("function(data, type, full){ return '<span class=sparkSamples>' + data + '</span>' }")), list(targets=8, render=JS("function(data, type, full){ return '<span class=sparkSeries>' + data + '</span>' }")))
+
+cb = JS(paste0("function (oSettings, json) {\n  $('.sparkSeries:not(:has(canvas))').sparkline('html', { ", line_string, " });\n  $('.sparkSamples:not(:has(canvas))').sparkline('html', { ", box_string, " });\n}"), collapse = '')
+
+dt2 <- dat.t %>% datatable(.,caption='Table 3.1.2 : Daily Summary of Staking Data.', rownames=FALSE, extensions=c('ColReorder','ColVis','TableTools'), options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)), scrollX=TRUE,scrollCollapse=TRUE, columnDefs=cd, fnDrawCallback=cb))
+dt2$dependencies <- append(dt2$dependencies, htmlwidgets:::getDependency("sparkline"))
+dt2
+```
+
+*table 3.1.2* `r paste(unlist(strsplit(as.character(dim(d1)),' ')), collapse=' x ')`
 
 
 ### 3.2 Analyse the Staking Handicap
@@ -263,9 +247,9 @@ ggplot(melted, aes(x=Sess, y=value/1000000, fill=variable, color=variable)) + ge
 mbase2 <- mbase$datasets[!(mbase$datasets$Home %in% mbase$others)|!(mbase$datasets$Away %in% mbase$others),]
 
 ## Handicap breakdown summary
-#' @ahBets <- mbase2 %>% group_by(HCap, AHOU, Picked) %>% summarise(Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
+#'@ ahBets <- mbase2 %>% group_by(HCap, AHOU, Picked) %>% summarise(Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
 ahBets <- ddply(mbase2, .(HCap, AHOU, Picked), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), Return=sum(PL,Stakes), PL=sum(PL), PL.percent=(PL/Stakes))
-#' @llply(split(mbase2, mbase2$AHOU), function(x) kable(head(ddply(x, .(HCap,Picked), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes)))))
+#'@ llply(split(mbase2, mbase2$AHOU), function(x) kable(head(ddply(x, .(HCap,Picked), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes)))))
 
 ahBets <- data.frame(ddply(mbase2, ~HCap+AHOU+Picked,
                            .drop=TRUE, colwise(.fun=sum, .cols=~round(Stakes,2)+round(Return,2)+round(PL,2), na.rm=TRUE)),
@@ -273,10 +257,9 @@ ahBets <- data.frame(ddply(mbase2, ~HCap+AHOU+Picked,
                            .drop=TRUE, colwise(.fun=mean, .cols=~round(Stakes,2)+round(Return,2)+round(PL,2), na.rm=TRUE))[-c(1:3)],
                      ddply(mbase2, ~HCap+AHOU+Picked,
                            .drop=TRUE, colwise(.fun=sd, .cols=~round(Stakes,2)+round(Return,2)+round(PL,2), na.rm=TRUE))[-c(1:3)],
-                     ddply(mbase2, ~HCap+AHOU+Picked, .drop=TRUE, colwise(.fun=length, .cols=~round(Stakes,2)))[-c(1:3)])
+                     ddply(mbase2, ~HCap+AHOU+Picked, .drop=TRUE, colwise(.fun=length, .cols=~round(Stakes,2)))[-c(1:3)]) %>% tbl_df
 names(ahBets) <- suppressWarnings(c('HCap','AHOU','Picked','Stakes','Return','PL','S.mean','R.mean','PL.mean','S.sd','R.sd','PL.sd','Count'))
-ahBets$R.percent <- ahBets$Return/ahBets$Stakes
-ahBets$PL.percent <- ahBets$PL/ahBets$Stakes
+ahBets %<>% mutate(R.percent=Return/Stakes, PL.percent=PL/Stakes)
 
 #'@ llply(split(ahBets,ahBets$AHOU), function(x) kable(head(x[order(x$Stakes,decreasing=TRUE),])))
 lst <- llply(split(ahBets,ahBets$AHOU),function(x) x)
@@ -288,14 +271,14 @@ lst[[2]] %>% datatable(.,caption="Table 3.2.1B : Firm A Staking Data Hdp Summary
 
   From above table, mostly placed on Asian Handicap range concedes `-0.50` ball to taken `+1.00` ball. The `-0.25` and `+0.75` generates most profit.
 
-  Secondly, from the Goalline mostly taking `over` selection on `2.00` balls and `2.25` balls. (Since Dutch, Japanese, Spanish and Women soccer leagues always scoring more goals, but Protuguese, Italian, French leagues always score less, English leagues average `2.5` balls)
+  Secondly, from the Goal-line mostly taking `over` selection on `2.00` balls and `2.25` balls. (Since Dutch, Japanese, Spanish and Women soccer leagues always scoring more goals, but Portuguese, Italian, French leagues always score less, English leagues average `2.5` balls)
 
 ```{r data-hdp-summary-plot1, echo=FALSE, results='asis'}
 ## Plot the Stakes and P&L on AH and OU handicap graphs
-melted <- melt(ahBets[c('AHOU','HCap','Picked','Stakes','PL')], id.vars=c('HCap','AHOU','Picked')) %>% tbl_df
+#'@ melted <- melt(ahBets[c('AHOU','HCap','Picked','Stakes','PL')], id.vars=c('HCap','AHOU','Picked')) %>% tbl_df
 
 gvis.options <- list(hAxis="{title:'HCap'}", vAxis="{title:'Stakes(in \'0000)'}",width=img.width, height=img.height)
-line.gvis <- gvisLineChart(xvar="HCap", yvar=c("value"), data=melted, options=gvis.options)
+line.gvis <- gvisLineChart(xvar='HCap', yvar=c('Stakes','PL'), data=ahBets, options=gvis.options)
 plot(line.gvis)
 
 ## Plot in $1 = $1000,000
@@ -314,10 +297,10 @@ rm(melted)
 
 ```{r data-hdp-summary-table2, echo=FALSE, results='asis'}
 ## Favorite or Underdog and price range breakdown
-#' @fuBets <- subset(mbase2, CurScore!='No') %>% group_by(AHOU, pHKRange, Picked) %>% summarise(Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
-#' @subset(mbase2, InPlay2=='No') #Pre-games
-#' @split(mbase2, mbase$InPlay2)
-#' @fuBets <- ddply(mbase2, .(AHOU, pHKRange, Picked), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), Return=sum(Return), PL=sum(PL), PL.percent=(PL/Stakes))
+#'@ fuBets <- subset(mbase2, CurScore!='No') %>% group_by(AHOU, pHKRange, Picked) %>% summarise(Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
+#'@ subset(mbase2, InPlay2=='No') #Pre-games
+#'@ split(mbase2, mbase$InPlay2)
+#'@ fuBets <- ddply(mbase2, .(AHOU, pHKRange, Picked), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), Return=sum(Return), PL=sum(PL), PL.percent=(PL/Stakes))
 
 fuBets <- data.frame(ddply(mbase2, ~AHOU+pHKRange+Picked,
                            .drop=TRUE, colwise(.fun=sum, .cols=~round(Stakes,2)+round(Return,2)+round(PL,2), na.rm=TRUE)),
@@ -326,10 +309,9 @@ fuBets <- data.frame(ddply(mbase2, ~AHOU+pHKRange+Picked,
                      ddply(mbase2, ~AHOU+pHKRange+Picked,
                            .drop=TRUE, colwise(.fun=sd, .cols=~round(Stakes,2)+round(Return,2)+round(PL,2), na.rm=TRUE))[-c(1:3)],
                      ddply(mbase2, ~AHOU+pHKRange+Picked,
-                           .drop=TRUE, colwise(.fun=length, .cols=~round(Stakes,2)))[-c(1:3)])
+                           .drop=TRUE, colwise(.fun=length, .cols=~round(Stakes,2)))[-c(1:3)]) %>% tbl_df
 names(fuBets) <- suppressWarnings(c('AHOU','pHKRange','Picked','Stakes','Return','PL','S.mean','R.mean','PL.mean','S.sd','R.sd','PL.sd','Count'))
-fuBets$R.percent <- fuBets$Return/fuBets$Stakes
-fuBets$PL.percent <- fuBets$PL/fuBets$Stakes
+fuBets %<>% mutate(R.percent=Return/Stakes, PL.percent=PL/Stakes)
 
 lst <- llply(split(fuBets,fuBets$AHOU),function(x) x)
 lst[[1]] %>% datatable(.,caption="Table 3.3.1A : Firm A Staking Data Hdp Summary",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip', colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
@@ -342,10 +324,10 @@ lst[[2]] %>% datatable(.,caption="Table 3.3.1B : Firm A Staking Data Hdp Summary
 
 ```{r data-hdp-summary-plots2, echo=FALSE, results='asis'}
 ## Plot the Stakes and P&L on AH and OU Price Range graphs
-melted <- melt(fuBets[c('AHOU','pHKRange','Picked','Stakes','PL')], id.vars=c('pHKRange','AHOU','Picked')) %>% tbl_df
+#'@ melted <- melt(fuBets[c('AHOU','pHKRange','Picked','Stakes','PL')], id.vars=c('pHKRange','AHOU','Picked')) %>% tbl_df
 
 gvis.options <- list(hAxis="{title:'pHKRange'}", vAxis="{title:'Stakes(in \'0000)'}",width=img.width, height=img.height)
-line.gvis <- gvisLineChart(xvar="pHKRange", yvar=c("value"), data=melted, options=gvis.options)
+line.gvis <- gvisLineChart(xvar='pHKRange', yvar=c('Stakes','PL'), data=fuBets, options=gvis.options)
 plot(line.gvis)
 
 ## Plot in $1 = $1000,000
@@ -364,8 +346,8 @@ rm(melted)
 
 ```{r data-ip-summary-table1, echo=FALSE, results='asis'}
 ## In-Play : time range
-#' @ipBets1 <- tbl_df(subset(mbase2, CurScore!='No')) %>% group_by(AHOU,ipRange) %>% summarise(Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
-#' @ipBets1 <- ldply(split(mbase2, mbase2$InPlay2), function(x) {ddply(x, .(AHOU,ipRange), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))})
+#'@ ipBets1 <- tbl_df(subset(mbase2, CurScore!='No')) %>% group_by(AHOU,ipRange) %>% summarise(Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
+#'@ ipBets1 <- ldply(split(mbase2, mbase2$InPlay2), function(x) {ddply(x, .(AHOU,ipRange), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))})
 
 ipBets1 <- data.frame(ddply(mbase2, ~InPlay2+AHOU+ipRange,
                             .drop=TRUE, colwise(.fun=sum, .cols=~round(Stakes,2)+round(Return,2)+round(PL,2), na.rm=TRUE)),
@@ -376,8 +358,7 @@ ipBets1 <- data.frame(ddply(mbase2, ~InPlay2+AHOU+ipRange,
                       ddply(mbase2, ~InPlay2+AHOU+ipRange,
                             .drop=TRUE, colwise(.fun=length, .cols=~round(Stakes,2)))[-c(1:3)])
 names(ipBets1) <- suppressWarnings(c('InPlay2','AHOU','ipRange','Stakes','Return','PL','S.mean','R.mean','PL.mean','S.sd','R.sd','PL.sd','Count'))
-ipBets1$R.percent <- round(ipBets1$Return/ipBets1$Stakes,4)
-ipBets1$PL.percent <- round(ipBets1$PL/ipBets1$Stakes,4)
+ipBets1 %<>% mutate(R.percent=round(Return/Stakes,4), PL.percent=round(PL/Stakes,4))
 
 lst <- llply(split(ipBets1,ipBets1$AHOU),function(x) x)
 lst[[1]] %>% datatable(.,caption="Table 3.4.1A : Firm A Staking InPlay Data",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip', colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
@@ -386,14 +367,14 @@ lst[[2]] %>% datatable(.,caption="Table 3.4.1B : Firm A Staking InPlay Data",ext
 
 *table 3.4.1* `r llply(split(ahBets,ipBets1$AHOU), function(x) paste(unlist(strsplit(as.character(dim(x)),' ')), collapse=' x '))`
 
-  The table above shows the breakdown stakes on `Breaks` includes pregames of Extra-Time (started 90 minutes games), Half-Time and Full-Time in both 90 minutes games and also Extra-Time, Injuries-Time, Breaks-Time etc (All stakes after blew game-start whisle and before final result). While `No` means pre-games stakes and P&L summary.
+  The table above shows the breakdown stakes on `Breaks` includes pregames of Extra-Time (started 90 minutes games), Half-Time and Full-Time in both 90 minutes games and also Extra-Time, Injuries-Time, Breaks-Time etc (All stakes after blew game-start whistle and before final result). While `No` means pre-games stakes and P&L summary.
 
 ```{r data-ip-summary-plots1, echo=FALSE, results='asis'}
 ## Plot the Stakes and P&L on AH and OU In-Play different time Range graphs
-melted <- melt(ipBets1[c('AHOU','ipRange','Stakes','PL')], id.vars=c('ipRange','AHOU')) %>% tbl_df
+#'@ melted <- melt(ipBets1[c('AHOU','ipRange','Stakes','PL')], id.vars=c('ipRange','AHOU')) %>% tbl_df
 
 gvis.options <- list(hAxis="{title:'ipRange'}", vAxis="{title:'Stakes(in \'0000)'}",width=img.width, height=img.height)
-line.gvis <- gvisLineChart(xvar="ipRange", yvar=c("value"), data=melted, options=gvis.options)
+line.gvis <- gvisLineChart(xvar='ipRange', yvar=c('Stakes','PL'), data=ipBets1, options=gvis.options)
 plot(line.gvis)
 
 ## Plot in $1 = $1000,000
@@ -405,13 +386,13 @@ rm(melted)
 
 *graph 3.4.1*
 
-  From the above graph shows the In-Play stakes, the first `(0,10]` time range placed most stakes while `(55,60]` start dropping. The <NA> includes all stakes when the soccer players are not playing on the football field. (Pre-games, Halft-Time, Full-Time, Extra-Time, Injuries Time, Breaks Time etc.)
+  From the above graph shows the In-Play stakes, the first `(0,10]` time range placed most stakes while `(55,60]` start dropping. The <NA> includes all stakes when the soccer players are not playing on the football field. (Pre-games, Half-Time, Full-Time, Extra-Time, Injuries Time, Breaks Time etc.)
 
 ```{r data-ip-summary-table2, echo=FALSE, results='asis'}
 ## In-Play : time range, current score, current ah/ou and also picked home team or favorite team etc.
-#' @ipBets2 <- tbl_df(subset(mbase2, CurScore!='No')) %>% group_by(HCap,AHOU,CurScore,ipRange,Picked,Picked2) %>% summarise(Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
-#' @ipBets2 <- ddply(subset(mbase2, CurScore!='No'), .(HCap,AHOU,CurScore,ipRange,Picked,Picked2), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
-#' @ipBets2 <- ldply(split(mbase2, mbase2$InPlay2), function(x) { ddply(x, .(HCap,AHOU,CurScore,ipHCap,ipRange,Picked,Picked2), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))})
+#'@ ipBets2 <- tbl_df(subset(mbase2, CurScore!='No')) %>% group_by(HCap,AHOU,CurScore,ipRange,Picked,Picked2) %>% summarise(Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
+#'@ ipBets2 <- ddply(subset(mbase2, CurScore!='No'), .(HCap,AHOU,CurScore,ipRange,Picked,Picked2), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))
+#'@ ipBets2 <- ldply(split(mbase2, mbase2$InPlay2), function(x) { ddply(x, .(HCap,AHOU,CurScore,ipHCap,ipRange,Picked,Picked2), summarise, Stakes=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), PL=sum(PL), PL.percent=(PL/Stakes))})
 
 ipBets2 <- data.frame(ddply(mbase2, ~InPlay2+HCap+AHOU+CurScore+ipHCap+ipRange+Picked+Picked2,
                             .drop=TRUE, colwise(.fun=sum, .cols=~round(Stakes,2)+round(Return,2)+round(PL,2), na.rm=TRUE)),
@@ -420,10 +401,9 @@ ipBets2 <- data.frame(ddply(mbase2, ~InPlay2+HCap+AHOU+CurScore+ipHCap+ipRange+P
                       ddply(mbase2, ~InPlay2+HCap+AHOU+CurScore+ipHCap+ipRange+Picked+Picked2,
                             .drop=TRUE, colwise(.fun=sd, .cols=~round(Stakes,2)+round(Return,2)+round(PL,2), na.rm=TRUE))[-c(1:8)],
                       ddply(mbase2, ~InPlay2+HCap+AHOU+CurScore+ipHCap+ipRange+Picked+Picked2,
-                            .drop=TRUE, colwise(.fun=length, .cols=~round(Stakes,2)))[-c(1:8)])
+                            .drop=TRUE, colwise(.fun=length, .cols=~round(Stakes,2)))[-c(1:8)]) %>% tbl_df
 names(ipBets2) <- suppressWarnings(c('InPlay2','HCap','AHOU','CurScore','ipHCap','ipRange','Picked','Picked2','Stakes','Return','PL','S.mean','R.mean','PL.mean','S.sd','R.sd','PL.sd','Count'))
-ipBets2$R.percent <- round(ipBets2$Return/ipBets2$Stakes,2)
-ipBets2$PL.percent <- round(ipBets2$PL/ipBets2$Stakes,2)
+ipBets2 %<>% mutate(R.percent=round(Return/Stakes,2), PL.percent=round(PL/Stakes,2))
 
 lst <- llply(split(ipBets2,ipBets2$AHOU),function(x) x)
 lst[[1]] %>% datatable(.,caption="Table 3.4.2A : Firm A Staking InPlay Data",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
@@ -436,12 +416,16 @@ lst[[2]] %>% datatable(.,caption="Table 3.4.2B : Firm A Staking InPlay Data",ext
 
 ```{r data-ip-summary-plots2, echo=FALSE, results='asis'}
 ## Plot the Stakes and P&L on AH and OU In-Play different time Range graphs
-melted <- melt(ipBets2[c('HCap','AHOU','CurScore','ipHCap','ipRange','Picked','Picked2','Stakes','PL')], id.vars=c('HCap','AHOU','CurScore','ipHCap','ipRange','Picked','Picked2')) %>% tbl_df
+#'@ melted <- melt(ipBets2[c('HCap','AHOU','CurScore','ipHCap','ipRange','Picked','Picked2','Stakes','PL')], id.vars=c('HCap','AHOU','CurScore','ipHCap','ipRange','Picked','Picked2')) %>% tbl_df
+
+#'@ gvis.options <- list(hAxis="{title:'ipRange'}", vAxis="{title:'Stakes(in \'0000)'}",width=img.width, height=img.height)
+#'@ hist.gvis <- gvisHistogram(data=melted['value'], option=gvis.options)
+#'@ print(hist.gvis, tag="chart")
+#'@ plot(hist.gvis)
 
 gvis.options <- list(hAxis="{title:'ipRange'}", vAxis="{title:'Stakes(in \'0000)'}",width=img.width, height=img.height)
-hist.gvis <- gvisHistogram(data=melted['value'], option=gvis.options)
-print(hist.gvis, tag="chart")
-plot(hist.gvis)
+line.gvis <- gvisLineChart(xvar='ipRange', yvar=c('Stakes','PL'), data=ipBets1, options=gvis.options)
+plot(line.gvis)
 
 ## Plot in $1 = $100,000
 #'@ plots <- suppressWarnings(dlply(melted, .(AHOU), function(mb) qplot(x=ipRange, y=value/100000, fill=variable, data=mb, geom='bar', stat='identity', position='dodge', color=variable) + ylab("HKD (in '00,000)") + theme_economist(base_family='Verdana') + scale_colour_economist() + ggtitle(paste(mb$AHOU,'InPlay & Current Score Summary from',min(mbase2$Date),'to',max(mbase2$Date)))))
@@ -459,7 +443,7 @@ rm(melted)
 
 ### 4.1 Linear Model
 
-  Before we start modelling, we leeok at the summary of investment return rates basedon dataset `mbase2`.
+  Before we start modelling, we look at the summary of investment return rates based on data-set `mbase2`.
 
 ```{r data-return-summary-table1, echo=FALSE, results='asis'}
 ## Get the investment return rates per annun
@@ -489,8 +473,8 @@ mbase2$rEMProbL <- 1 - round(mbase2$rEMProbB,4)
 mbase2$favNetProb <- ifelse(mbase2$Picked=='favorite'|mbase2$Picked=='over' , mbase2$netProbB, mbase2$netProbL)
 mbase2$undNetProb <- ifelse(mbase2$Picked=='underdog'|mbase2$Picked=='under', mbase2$netProbB, mbase2$netProbL)
 
-#' @mbase2$favNetProb*log(1+mbase$Return*mbase2$Stakes) + mbase2$undNetProb*log(1+mbase2$Return*mbase2$Stakes)
-#' @mbase2[c('Stakes','Result','Return','PL','Rebates')]
+#'@ mbase2$favNetProb*log(1+mbase$Return*mbase2$Stakes) + mbase2$undNetProb*log(1+mbase2$Return*mbase2$Stakes)
+#'@ mbase2[c('Stakes','Result','Return','PL','Rebates')]
 
 mbase2 %>% select(No,EUPrice,HKPrice,fHKPriceL,fMYPriceB,fMYPriceL,netProbB,netProbL,rEMProbB,rEMProbL,favNetProb,undNetProb) %>% datatable(.,caption="Table 4.1.2 : Probabilities Table",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
 ```
@@ -504,13 +488,13 @@ mbase2 %>% select(No,EUPrice,HKPrice,fHKPriceL,fMYPriceB,fMYPriceL,netProbB,netP
 ## Learn about API authentication here: https://plot.ly/r/getting-started
 ## Find your api_key here: https://plot.ly/settings/api
 
-#' @model <- lm(rEMProbB ~ netProbB, data=mbase2)
-#' @grid <- with(mbase2, expand.grid(netProbB = seq(min(netProbB), max(netProbB), length = 20),
-#' @                                rEMProbB = seq(min(rEMProbB), max(rEMProbB), length = 20)))
-#' @grid$rEMProb <- stats::predict(model, newdata=grid)
-#' @viz2 <- qplot(netProbB, rEMProbB, data=mbase2) + geom_point(data=grid)
-#' @out <- ggplotly(viz2)
-#' @plotly_url <- out$response$url
+#'@ model <- lm(rEMProbB ~ netProbB, data=mbase2)
+#'@ grid <- with(mbase2, expand.grid(netProbB = seq(min(netProbB), max(netProbB), length = 20),
+#'@                                 rEMProbB = seq(min(rEMProbB), max(rEMProbB), length = 20)))
+#'@ grid$rEMProb <- stats::predict(model, newdata=grid)
+#'@ viz2 <- qplot(netProbB, rEMProbB, data=mbase2) + geom_point(data=grid)
+#'@ out <- ggplotly(viz2)
+#'@ plotly_url <- out$response$url
 
 ggplot(mbase2, aes(x = netProbB, y = rEMProbB)) + geom_point(aes(y = netProbB, color = 'netProbB')) +
   geom_point(aes(y = rEMProbB, color = 'rEMProbB')) + xlab('Bookmaker Backed Net Prob') + ylab('Calculated EM Backed Prob') +
@@ -531,10 +515,7 @@ ggplot(mbase2, aes(x = netProbB, y = rEMProbB)) + geom_point(aes(y = netProbB, c
 ## library('gmodels')
 ## CrossTable(mbase2$HCap, mbase2$Result)
 ##
-mResult <- ddply(mbase2, .(Result), summarise, Stakes=sum(Stakes), Return=sum(Return), Rates=Return/Stakes, n=length(Sess))
-mResult$S.prop <- round(mResult$Stakes/sum(mResult$Stakes),4)
-mResult$R.prop <- round(mResult$Return/sum(mResult$Return),4)
-mResult$prop <- round(mResult$n/sum(mResult$n),4)
+mResult <- ddply(mbase2, .(Result), summarise, Stakes=sum(Stakes), Return=sum(Return), Rates=Return/Stakes, n=length(Sess)) %>% tbl_df %>% mutate(S.prop=round(Stakes/sum(Stakes),4), R.prop=round(Return/sum(Return),4), prop=round(n/sum(n),4))
 tv <- c('Total',colSums(mResult[-1])); tv[4] <- as.numeric(tv[3])/as.numeric(tv[2])
 mResult <- suppressWarnings(rbind(mResult,tv))
 mResult$Result <- factor(c(as.character(mResult$Result)[-length(mResult$Result)],'Total')); rm(tv)
@@ -543,7 +524,7 @@ mResult %>% kable(.,caption='Table 4.1.3 : Annual Return Summary of Staking Data
 
 *table 4.1.3* `r paste(unlist(strsplit(as.character(dim(mResult)),' ')), collapse=' x ')`
 
-  The table above sumarise the stakes and return on soccer matches result.
+  The table above summarize the stakes and return on soccer matches result.
 
 ```{r data-preMatch, echo=FALSE, results='asis'}
 ##
@@ -554,18 +535,18 @@ hdp <- sort(unique(as.numeric(as.character(mbase2$HCap))))
 hdp
 ```
 
-  Due to the soccer matches randomly getting from different leagues, and also not Bonouli win-lose result but half win-lose etc as we see from above. Besides, there were mixed Pre-Games and also In-Play soccer matches and I filter-up the sample data to be `r paste(dim(preData), collapse=' x ')`. I don't pretend to know the correct answer or the model from firm A. However I take a sample presentation [An introduction to football modelling at Smartodds](https://people.maths.ox.ac.uk/siamstudentchapter/webpages/2011_Conference/Robert_Talk.pdf) from one of consultancy firm which is Dixon-Coles model and omitted the scoring process section.
+  Due to the soccer matches randomly getting from different leagues, and also not Bernoulli win-lose result but half win-lose etc as we see from above. Besides, there were mixed Pre-Games and also In-Play soccer matches and I filter-up the sample data to be `r paste(dim(preData), collapse=' x ')`. I don't pretend to know the correct answer or the model from firm A. However I take a sample presentation [An introduction to football modelling at Smartodds](https://people.maths.ox.ac.uk/siamstudentchapter/webpages/2011_Conference/Robert_Talk.pdf) from one of consultancy firm which is Dixon-Coles model and omitted the scoring process section.
 
   Here I cannot reverse computing from barely $\rho_i^{EM}$ without know the $\lambda_{ij}$ and $\gamma$ values. Therefore I try to using both Home and Away Scores to simulate and test to get the maximum likelihood $\rho_i^{EM}$.
 
 $$X_{ij} = pois(\gamma \alpha_{ij} \beta_{ij} ); Y_{ij} = pois(\alpha_{ij} \beta_{ij})$$   *equation 4.1.3*
 
-  The poisson model will be touoched in next section 4.2.
+  The Poisson model will be touched in next section 4.2.
 
 
 ### 4.2 Poisson Modelling
 
-  Here we introduce the [Dixon&Coles1996](http://www.math.ku.dk/~rolf/teaching/thesis/DixonColes.pdf) poisson model and its codes. You are freely learning from below links if interest.
+  Here we introduce the [Dixon&Coles1996](http://www.math.ku.dk/~rolf/teaching/thesis/DixonColes.pdf) Poisson model and its codes. You are freely learning from below links if interest.
 
 - [Dixon and Cole's Poisson regression R Packages](http://lastplanetranking.blogspot.com/2013/11/code.html)
 - [Dixon and Coles Poisson model](http://opisthokonta.net/?p=890)
@@ -580,7 +561,7 @@ $$X_{ij} = pois(\gamma \alpha_{ij} \beta_{ij} ); Y_{ij} = pois(\alpha_{ij} \beta
 ## http://stackoverflow.com/questions/19532651/benchmarking-logistic-regression-using-glm-fit-bigglm-speedglm-glmnet-libli
 ##
 ## Test if placed multiple bets on same match
-#' @preData[duplicated(preData[c('Date','Home','Away')]),c('Date','Home','Away','HG','AG','InPlay','InPlay2','Mins','Mins2','Picked2')]
+#'@ preData[duplicated(preData[c('Date','Home','Away')]),c('Date','Home','Away','HG','AG','InPlay','InPlay2','Mins','Mins2','Picked2')]
 
 ```
 
@@ -603,7 +584,7 @@ $$S=(\rho*\sigma-1)/(\sigma-1)$$   *equation-4.3.1*
 
 - It outperforms in the long run any other essentially different strategy almost surely
 
-  The criterion is known to economists and financial theorists by names such as the geometric mean maximizing portfolio strategy, the growth-optimal strategy, the capital growth criterion, etc. We will now show that Kelly betting will maximize the expected log utility for sportsbook betting.
+  The criterion is known to economists and financial theorists by names such as the geometric mean maximizing portfolio strategy, the growth-optimal strategy, the capital growth criterion, etc. We will now show that Kelly betting will maximize the expected log utility for sports-book betting.
 
 ```{r data-Kelly, echo=FALSE, results='asis'}
 ## Kelly Criterion model
@@ -664,8 +645,8 @@ Chapter 4.2 Comparison of Different Feature Sets and Betting Strategies in []()
 ```{r, echo=FALSE, results='asis'}
 ## Bootstrap and apply maximum likelihood model 
 ## http://www.r-bloggers.com/apple-compared-to-others-with-ggthemes/
-#' @
-#' @kable(mbase2) ##knit table
+#'@ 
+#'@ kable(mbase2) ##knit table
 ```
 
   [Dixon&Pope2003](http://www.sciencedirect.com/science/article/pii/S016920700400010X) apply linear model to compare the efficiency of the odds prices offer by first three largest Firm A, B and C in UK.
@@ -687,7 +668,7 @@ options(op)
 
 ### 6.1 Conclusion
 
-  Due to the datasets I collected just one among all agents among couple sports-bookmakers [4lowin](https://www.youtube.com/watch?v=eFYS0jdSiWc). Here I cannot determine if the sample data among the population...
+  Due to the data-sets I collected just one among all agents among couple sports-bookmakers [4lowin](https://www.youtube.com/watch?v=eFYS0jdSiWc). Here I cannot determine if the sample data among the population...
 
 
 ### 6.2 Future Works
@@ -709,7 +690,7 @@ It's useful to record some information about how your file was created.
   * `r R.version.string`
   * R version (short form): `r getRversion()`
   * `rmarkdown` package version: `r packageVersion('rmarkdown')`
-  * File version: 1.0.3
+  * File version: 1.0.0
   * File latest updated date: `r Sys.Date()`
   * Author Profile: [Ryo®, Eng Lian Hu](http://rpubs.com/englianhu/ryoeng)
   * GitHub: [Source Code](https://github.com/Scibrokes/Betting-Strategy-and-Model-Validation/blob/master/Betting%20Strategy%20and%20Model%20Validation.Rmd)
@@ -742,6 +723,7 @@ Sys.info()
   * [凯利模式资金管理](http://ch-hsieh.blogspot.com/2015/01/kelly-criterion-0.html)
   * [Wrangling F1 Data With R](http://www.r-bloggers.com/wrangling-f1-data-with-r-f1datajunkie-book/)
   * [Interactive visualizations with R - a minireview](http://ouzor.github.io/blog/2014/11/21/interactive-visualizations.html)
+  * [R + htmlwidgets + DT + sparkline](https://englianhu.wordpress.com/2015/10/04/r-htmlwidgets-dt-sparkline/)
   
   
 **Powered by - Copyright© Intellectual Property Rights of <img src='figure/Scibrokes.png' width='24'> [Scibrokes®](http://www.scibrokes.com)**

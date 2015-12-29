@@ -77,9 +77,9 @@ readfirmDatasets <- function(years=years, parallel=FALSE){
   rm(mx, mlist, matchID, InPlay)
   dfm <- tbl_df(dfm[c('No','Sess','Day','DateUK','Date','Time','Home','Away','Selection','HCap','EUPrice','Stakes','CurScore','Mins','Result','PL','Rebates')])
   dfm <- llply(dfm, function(x){gsub('^\\s{1,}|\\s{1,}$','',x)},.parallel=parallel) %>% data.frame %>% tbl_df %>% mutate_each(funs(as.character)) %>% 
-         mutate(No=as.numeric(No),Sess=as.numeric(Sess),DateUK=ymd_hms(DateUK),Date=ymd(Date),Time=hm(Time),HCap=round(as.numeric(HCap),2),
-         EUPrice=round(as.numeric(EUPrice),2),Stakes=as.numeric(Stakes),PL=as.numeric(PL),Rebates=round(as.numeric(Rebates),2),
-         Return=round(as.numeric(Stakes)+as.numeric(PL),2))
+    mutate(No=as.numeric(No),Sess=as.numeric(Sess),DateUK=ymd_hms(DateUK),Date=ymd(Date),Time=hm(Time),HCap=round(as.numeric(HCap),2),
+           EUPrice=round(as.numeric(EUPrice),2),Stakes=as.numeric(Stakes),PL=as.numeric(PL),Rebates=round(as.numeric(Rebates),2),
+           Return=round(as.numeric(Stakes)+as.numeric(PL),2))
   
   res <- list(datasets=dfm,others=others,corners=corners)
   

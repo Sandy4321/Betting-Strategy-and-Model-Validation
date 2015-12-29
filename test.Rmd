@@ -2,14 +2,23 @@
 title: "Test"
 author: "Ryo®, Eng Lian Hu"
 date: "October 25, 2015"
-output: html_document
+output: 
+  html_document: 
+    fig_caption: yes
+    highlight: haddock
+    theme: cerulean
+    toc: yes
+  word_document: 
+    fig_caption: yes
+  pdf_document: 
+    fig_caption: yes
+    toc: yes
 ---
 
 
 Testing output of the coding.
 
-```{r load-packages}
-## ,include=FALSE}
+```{r load-packages, include=FALSE}
 ## Setup Options, Loading Required Libraries and Preparing Environment
 ## Setup `knitr` options and loading the required libraries.
 
@@ -24,15 +33,8 @@ if(!suppressPackageStartupMessages(require('BBmisc'))){
 if(!suppressPackageStartupMessages(require('BiocParallel'))){
   devtools::install_github('Bioconductor/BiocParallel')}
 
-## http://www.r-bloggers.com/new-package-dplyrr-utilities-for-comfortable-use-of-dplyr-with-databases
-## direct connect to database (if any)
-#' @if(!'dplyrr' %in% installed.packages()){
-#' @  devtools::install_github("hoxo-m/dplyrr")}
-#' @install.packages('nycflights13')
-#' @library(c('dplyrr','nycflights13'))
-
 suppressPackageStartupMessages(library('BBmisc'))
-pkgs <- c('devtools','zoo','chron','stringr','stringi','reshape','reshape2','data.table','sparkline','DT','plyr','dplyr','magrittr','foreach','manipulate','ggplot2','ggthemes','proto','extrafont','directlabels','PerformanceAnalytics','plotly','doParallel','rvest','highlightHTML','knitr','rmarkdown','scales','lubridate','tidyr','whisker','gtable','grid','gridExtra','pander','arules','arulesViz','googleVis')
+pkgs <- c('devtools','zoo','chron','stringr','stringi','reshape','reshape2','tbl_df','sparkline','data.table','DT','plyr','dplyr','magrittr','foreach','manipulate','ggplot2','ggthemes','proto','extrafont','directlabels','PerformanceAnalytics','plotly','doParallel','rvest','highlightHTML','knitr','rmarkdown','scales','lubridate','tidyr','whisker','gtable','grid','gridExtra','pander','arules','arulesViz','googleVis','rlist')
 #'@ c('memoise','RStudioAMI','parallel','BiocParallel','RSelenium','doMC','editR') #load if needed
 suppressAll(lib(pkgs)); rm(pkgs)
 ```
@@ -42,123 +44,174 @@ suppressAll(lib(pkgs)); rm(pkgs)
 
 ## Preparing the parallel cluster using the cores
 doParallel::registerDoParallel(cores = 16)
-#' @BiocParallel::register(MulticoreParam(workers=8))
-
-## knitr configuration
-opts_knit$set(progress=FALSE)
-opts_chunk$set(echo=TRUE, message=FALSE, tidy=TRUE, comment=NA, fig.path="figure/", fig.keep="high", fig.width=10, fig.height=6, fig.align="center")
-
-## Table width setting
-panderOptions('table.split.table', Inf)
-
-## Setup plotly API
-Sys.setenv('plotly_username'='englianhu')
-Sys.setenv('plotly_api_key'='xxxxxxxxx')
 
 # Set the googleVis options first to change the behaviour of plot.gvis, so that only the chart component of the HTML file is written into the output file.
 op <- options(gvis.plot.tag='chart')
 ```
-
-
-### 2.1 Collect and Reprocess the Dataset
-
-  I collect the dataset of World Wide soccer matches from year 2011 until 2015 from a British betting consultancy named firm A. All bets placed by display on HK currency, and the odds price also measure based on Hong Kong price.
-  
-  I tried to apply `RSelenium` on [**RStudio Server Centos7**](http://rstudio.scibrokes.com) to scrape the data from livescore website includes the odds price but the binary [phantomjs](https://github.com/ariya/phantomjs/issues/12948#issuecomment-131267076) is not available for Linux, and I also not familiar with the installation of `Java` as well as setting of the path for `rJava`. Kindly refer to [Natural Language Analysis](http://rpubs.com/englianhu/natural-language-analysis) for more information about the teams name matching.
 
 ```{r read-data-summary-table, results='asis'}
 ## Read the datasets
 ## Refer to **Testing efficiency of coding.Rmd** at chunk `get-data-summary-table-2.1`
 source(paste0(getwd(),'/function/readfirmDatasets.R'))
 source(paste0(getwd(),'/function/arrfirmDatasets.R'))
-years <- seq(2011,2015)
+years <- 2011:2014
 
-## Here I take the majority leagues setting profile which are "league-10-12"
-## fMYPriceB = Back with vigorish price; fMYPriceL = Lay with vigorish price
-## Here we term as Fair Odds
 lProfile <- c(AH=0.10,OU=0.12)
-
 mbase <- readfirmDatasets(years=years) %>% arrfirmDatasets(., lProfile=lProfile)
-
-#'@ pander(head(mbase$datasets)) # exactly same layout with kable(x)
-#'@ kable(head(mbase$datasets)) ## example of the dataset in the research paper
-
-#'@ mbase$datasets %>% datatable(.,caption="Table 2.1.1 : Firm A Staking Data",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
+r <- range(mbase$datasets$Stakes)
 ```
 
-  Please refer to [Natural Language Analysis](http://rpubs.com/englianhu/natural-language-analysis) to see the firm A staking sample dataset.
+```{r, echo=FALSE}
+bar_string <- "type: 'bar', barColor: 'orange', negBarColor: 'purple', highlightColor: 'black'"
 
-```{r scrap-data, results='asis'}
-## Scrape the leagues and also overrounds which provides by a sportsbookmaker named Firm B
-#'@ lnk <- 'http://data.nowgoal.com/history/handicap.htm'
-## Above website provides odds price history but sendkeyElements cannot work in RSelenium, will follow-up
-## https://github.com/ropensci/RSelenium/issues/55
-## Therefore scrape spbo link to know the league of matches
+cb_bar = JS(paste0("function (oSettings, json) { $('.spark:not(:has(canvas))').sparkline('html', { ", bar_string, " }); }"), collapse = "")
 
-## Besides, need to scrap the final-scores / half-time scores / result of soccer matches
-dateID <- sort(unique(mbase$datasets$Date)); spboDate <- gsub('-','',dateID)
-#'@ lnk <- paste0('http://www8.spbo.com/history.plex?day=',spboDate,'&l=en')
+line_string <- "type: 'line', lineColor: 'black', fillColor: '#ccc', highlightLineColor: 'orange', highlightSpotColor: 'orange'"
 
-## Due to the scrapSPBO function scrapped unmatched data, example lnk[827],
-##  therefore I rewrite the function as scrapSPBO2
-#'@ source(paste0(getwd(),'/function/scrapSPBO2.R'))
-#'@ scrapSPBO2(lnk=lnk, dateID=dateID, path='livescore', parallel=TRUE)
+cb_line <- JS(paste0("function (oSettings, json) { $('.spark:not(:has(canvas))').sparkline('html', { ", line_string, ", chartRangeMin: ", r[1], ", chartRangeMax: ", r[2], " }); }"), collapse = "")
 
-## Load the scraped spbo livescore datasets.
-source(paste0(getwd(),'/function/readSPBO2.R'))
-spboData <- readSPBO2(dateID=dateID, parallel=FALSE)
+box_string <- "type: 'box', lineColor: 'black', whiskerColor: 'black', outlierFillColor: 'black', outlierLineColor: 'black', medianColor: 'black', boxFillColor: 'orange', boxLineColor: 'black'"
 
-## Apply stringdist() to 'exactly matching' and 'approximate matching' team names
-#'@ method <- c('osa','lv','dl','hamming','lcs','qgram','cosine','jaccard','jw','soundex')
-#'@ source(paste0(getwd(),'/function/arrTeamID.R'))
-#'@ tmID <- arrTeamID(mbase, spboData, parallel=FALSE)
-tmIDdata <- read.csv(paste0(getwd(),'/datasets/teamID.csv'), header=TRUE, sep=',') %>% mutate_each(funs(as.character)) %>% tbl_df %>% filter(spbo!='Kuban Krasnodar')
-spboData %<>% filter((Home %in% tmIDdata$spbo)|(Away %in% tmIDdata$spbo))
+cb_box1 = JS(paste0("function (oSettings, json) { $('.spark:not(:has(canvas))').sparkline('html', { ", box_string, " }); }"), collapse = "")
+cb_box2 = JS(paste0("function (oSettings, json) { $('.spark:not(:has(canvas))').sparkline('html', { ", box_string, ", chartRangeMin: ", r[1], ", chartRangeMax: ", r[2], " }); }"), collapse = "")
 ```
   
-
-## 3. Analyse the Staking Model
-
-
-### 3.1 Analyse the Annual Stakes
-
-  Before we start analyse the staking model, we are firstly see the monthly Stakes and Profit & Lose of the Agency A.
-
+  Please refer to [Natural Language Analysis](http://rpubs.com/englianhu/natural-language-analysis) to see the firm A staking sample dataset.
+  
 ```{r data-month-summary-plots, results='asis'}
 ## Before we start analyse the staking model, we are firstly see the monthly Stakes and Profit & Lose of the Agency A
 ## the stakes amount display as $1 = $10,000
-#'@ zoo::as.yearmon(mbase$Date,'%b')
-#'@ chron::cut_date()
-m <- ddply(data.frame(Month=as.yearmon(mbase$datasets$Date,'%b'),mbase$datasets), .(Sess, Month), summarise, Stakes=sum(Stakes)/10000, PL=sum(PL)/10000)
-melted <- melt(m, id.vars=c('Sess','Month')) %>% tbl_df
-#'@ melted$Month2 <- format(melted$Month,'%b')
+
+dat <- mbase$datasets %>% mutate(Month=paste(month(Date,label=TRUE),year(Date))) %>% tbl_df
+#'@ dat <- mbase$datasets %>% mutate(Month=month(ymd(Date), label=TRUE)) %>% tbl_df
+m <- ddply(dat, .(Sess, Month), summarise, Stakes=sum(Stakes)/10000, PL=sum(PL)/10000) %>% tbl_df
+#'@ melted <- melt(m, id.vars=c('Sess','Month')) %>% tbl_df
 
 ## http://help.plot.ly/make-a-3D-surface-plot
 ## Will doing research on 3D graph some other days.
-gvis.options <- list(hAxis="{title:'Month'}", vAxis="{title:'Stakes(in \'0000)'}",width='automatic', height='automatic')
-line.gvis <- gvisLineChart(xvar="Month", yvar=c("value"), data=melted, options=gvis.options)
+gvis.options <- list(hAxis="{title:'Month'}", vAxis="{title:'Stakes'}",width='automatic', height='automatic')
+line.gvis <- gvisLineChart(xvar='Month', yvar=c('Stakes','PL'), data=m, options=gvis.options)
 plot(line.gvis)
-print(line.gvis,tag='chart')
-#'@ plots <- suppressWarnings(dlply(melted, .(Sess), function(mb) ggplot(x=factor(Month), y=value, fill=variable, data=mb, geom='bar', stat='identity', position='dodge', color=variable) + ylab("HKD (in '0000)") + theme_pander(base_family='Verdana') + scale_fill_pander() + ggtitle(paste('Monthly Summary ',min(mb$Month),'-',max(mb$Month)))))
-
-#'@ rm(melted, m)
-#'@ do.call(grid.arrange, plots)
-```
-
-```{r}
-CC <- gvisComboChart(melted, xvar='Month',
-          yvar=c(value),
-          options=list(seriesType='bars',
-                       width=450, height=300,
-                       title='Monthly Summary',
-                       series='{0: {type:"line"}}'))
-plot(CC)
+#'@ print(line.gvis, tag='chart')
 ```
 
 *graph 3.1.1*
+
+```{r}
+#'@ CityPopularity$Mean=mean(CityPopularity$Popularity)
+#'@ plots <- gvisComboChart(CityPopularity, xvar='City', yvar=c('Mean', 'Popularity'), options=list(seriesType='bars', width=450, height=300, title='City Popularity', series='{0: {type:"line"}}'))
+#'@ plot(plots)
+```
+
+```{r}
+## aaaaaaaaaaaaaaa
+#'@ plots <- gvisComboChart(m, xvar='Month', yvar=c('Stakes','PL'), options=list(seriesType='bars', width=450, height=300, title='Monthly Summary', series='{0: {type:"line"}}'))
+#'@ plot(plots)
+#'@ print(plots, tag='chart')
+```
 
 ```{r, results='asis'}
 ## Set options back to original options
 options(op)
 ```
+
+## DT data tables
+
+  Here is the full data table generated with DT. There are various feature options for data table html widgets in the browser using DT. See this introduction for details.
+
+### DT
+
+```{r, echo=FALSE}
+dat <- mbase$datasets %>% mutate(Month=month(ymd(Date), label=TRUE)) %>% tbl_df
+m <- ddply(dat, .(Sess, Month, Day), summarise, Stakes=sum(Stakes)/10000, PL=sum(PL)/10000) %>% tbl_df
+
+m %>% select(Sess,Month,Day,Stakes) %>% datatable(.,caption="Table 3.1.1 : Annual Summary of Staking Data.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE))
+```
+
+```{r, echo=FALSE}
+## 12 columns which are counting from Jan until Dec
+colDefs1 <- list(list(targets = c(1:12), render = JS("function(data, type, full){ return '<span class=spark>' + data + '</span>' }")))
+
+## 4 columns which are counting the Soccer Session from 2011 untli 2014
+colDefs2 <- list(list(targets = c(1:4), render = JS("function(data, type, full){ return '<span class=spark>' + data + '</span>' }")))
+```
+
+```{r,echo=FALSE}
+dat.t <- m %>% group_by(Sess, Month) %>% summarise(Stakes = paste(Stakes, collapse = ",")) %>% tbl_df
+dat.ta <- suppressAll(dcast(dat.t, Sess ~ Month)) %>% tbl_df
+dat.tb <- suppressAll(dcast(dat.t, Month ~ Sess)) %>% tbl_df
+```
+
+### d1
+
+```{r, echo=FALSE}
+#'@ d1 <- dat.ta %>% datatable(.,caption="Table 3.1.1 : Annual Summary of Staking Data.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE,columnDefs = colDefs2, fnDrawCallback = cb_bar))
+#'@ d1 <- datatable(tbl_df(dat.ta), rownames = FALSE, options = list(columnDefs = colDefs1, fnDrawCallback = cb_line))
+
+d1 <- dat.ta %>% data.table %>% datatable(., rownames=FALSE, options=list(columnDefs=colDefs1, fnDrawCallback=cb_line))
+d1$dependencies <- append(d1$dependencies, htmlwidgets:::getDependency("sparkline"))
+d1
+```
+
+### d2
+
+```{r}
+#'@ d2 <- dat.tb %>% datatable(.,caption="Table 3.1.1 : Annual Summary of Staking Data.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE, options = list(columnDefs = colDefs2, fnDrawCallback = cb_line)))
+
+#'@ d2 <- datatable(tbl_df(dat.tb), rownames = FALSE, options = list(columnDefs = colDefs2, fnDrawCallback = cb_bar))
+d2 <- dat.tb %>% data.table %>% datatable(., rownames=FALSE, options=list(columnDefs=colDefs2, fnDrawCallback=cb_bar))
+d2$dependencies <- append(d2$dependencies, htmlwidgets:::getDependency("sparkline"))
+d2
+```
+
+Here I try to plot an inline graph `r sparkline(mbase$datasets$HKPrice, type='bar')` testing `r sparkline(mbase$datasets$netProbB)`... line `r sparkline(mbase$datasets$netProbB, type='line')`
+
+```{r}
+d3 <- datatable(data.table(dat.tb), rownames = FALSE, options = list(columnDefs = colDefs2, 
+    fnDrawCallback = cb_box1))
+d3$dependencies <- append(d3$dependencies, htmlwidgets:::getDependency("sparkline"))
+d3
+```
+
+```{r}
+d4 <- datatable(data.table(dat.tb), rownames = FALSE, options = list(columnDefs = colDefs2, 
+    fnDrawCallback = cb_box2))
+d4$dependencies <- append(d4$dependencies, htmlwidgets:::getDependency("sparkline"))
+d4
+```
+
+```{r, echo=FALSE}
+dat.t2 <- dat %>% group_by(Sess, Month, Day) %>% summarise(Mean = round(mean(Stakes), 1)/10000, SD = round(sd(Stakes), 2)/10000, Min = min(Stakes)/10000, Max = max(Stakes)/10000, Samples = paste(Stakes/10000, collapse = ",")) %>% mutate(Series = Samples) %>% tbl_df
+
+cd <- list(list(targets=7, render=JS("function(data, type, full){ return '<span class=sparkSamples>' + data + '</span>' }")), list(targets=8, render=JS("function(data, type, full){ return '<span class=sparkSeries>' + data + '</span>' }")))
+
+cb = JS(paste0("function (oSettings, json) {\n  $('.sparkSeries:not(:has(canvas))').sparkline('html', { ", line_string, " });\n  $('.sparkSamples:not(:has(canvas))').sparkline('html', { ", box_string, " });\n}"), collapse = "")
+```
+
+```{r}
+d5 <- dat.t2 %>% datatable(., rownames = FALSE, options = list(columnDefs=cd, fnDrawCallback=cb))
+d5$dependencies <- append(d5$dependencies, htmlwidgets:::getDependency("sparkline"))
+d5
+```
+
+### res
+
+```{r, echo=FALSE}
+## Annual summary
+res <- ldply(.data=split(mbase$datasets, mbase$datasets$Sess), summarise, S.total=sum(Stakes), S.median=median(Stakes), S.mean=mean(Stakes), S.sd=sd(Stakes), Count=length(PL), minHKPrcB=min(HKPrice), maxHKPrcB=max(HKPrice), minProbB=min(netProbB), maxProbB=max(netProbB), Return=sum(PL,Stakes), PL.Total=sum(PL), PL.percent=sum(PL)/sum(Stakes), S.box=as.character(paste(Stakes,collapse=','))) %>% tbl_df
+##, S.graph=as.character(paste(x$Stakes,collapse=',', PL.box=paste(x$PL,collapse=','), PL.graph=paste(x$PL,collapse=','))))) %>% tbl_df
+names(res)[1] <- 'Sess'
+
+cd <- list(list(targets=12, render=JS("function(data, type, full){ return '<span class=sparkSamples>' + data + '</span>' }")), list(targets=13, render=JS("function(data, type, full){ return '<span class=sparkSeries>' + data + '</span>' }")))
+
+cb = JS(paste0("function (oSettings, json) {\n  $('.sparkSeries:not(:has(canvas))').sparkline('html', { ", line_string, " });\n  $('.sparkSamples:not(:has(canvas))').sparkline('html', { ", box_string, " });\n}"), collapse = "")
+```
+
+```{r, echo=FALSE}
+#'@ res %>% datatable(.,caption="Table 3.1.1 : Annual Summary of Staking Data.",extensions=c('ColReorder','ColVis','TableTools'),options=list(dom='TC<"clear">rlfrtip',colVis=list(exclude=c(0),activate='mouseover'),tableTools=list(sSwfPath=copySWF(pdf=TRUE)),scrollX=TRUE,scrollCollapse=TRUE,columnDefs=cd, fnDrawCallback=cb))
+
+res %>% datatable(., rownames=FALSE, options=list(dom='t', scrollX=TRUE, scrollCollapse=TRUE, columnDefs=cd, fnDrawCallback=cb))
+res$dependencies <- append(res$dependencies, htmlwidgets:::getDependency("sparkline"))
+```
+
 

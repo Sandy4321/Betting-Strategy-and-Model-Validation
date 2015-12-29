@@ -1,7 +1,7 @@
 name: Publish Document
 account: rpubs
 server: rpubs.com
-bundleId:
-        https://api.rpubs.com/api/v1/document/121879/9f0b275090cd4bd1b14525f0b7cc0521
-url: http://rpubs.com/englianhu/121879
-when: 1448154389.5024
+appId: https://api.rpubs.com/api/v1/document/136868/6be109b8c5394e91aec73b9c7652780b
+bundleId: https://api.rpubs.com/api/v1/document/136868/6be109b8c5394e91aec73b9c7652780b
+url: http://rpubs.com/publish/claim/136868/f0c035e3c8fa46e786b7075862a1d2db
+when: 1450944182.09346
